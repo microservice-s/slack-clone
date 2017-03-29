@@ -11,6 +11,7 @@ const openGraphPrefix = "og:"
 type openGraphProps map[string]string
 
 func getPageSummary(url string) (openGraphProps, error) {
+	// aaayy
 	//Get the URL
 	//If there was an error, return it
 
