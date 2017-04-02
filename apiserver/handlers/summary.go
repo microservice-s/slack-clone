@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strings"
-
-	"io"
 
 	"golang.org/x/net/html"
 )
@@ -63,22 +63,25 @@ func getPageSummary(url string) (openGraphProps, error) {
 
 	//create a new tokenizer over the response body
 	tokenizer := html.NewTokenizer(res.Body)
+Loop:
 	for {
 		tt := tokenizer.Next()
-
+		token := tokenizer.Token()
+		fmt.Println(token.Attr)
 		switch tt {
 		case html.ErrorToken:
+			//log.Fatalf("error tokenizing HTML: %v", tokenizer.Err())
 			err := tokenizer.Err()
 			if err == io.EOF {
-				return props, nil
+				break Loop
 			}
-			return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())
-
+			log.Fatalf("error tokenizing HTML: %v", tokenizer.Err())
+			//return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())``
 		// open graph properties only exist in the head
 		case html.EndTagToken:
 			token := tokenizer.Token()
 			if token.Data == "head" {
-				break
+				break Loop // using the go Label break "Loop"
 			}
 		case html.StartTagToken:
 			token := tokenizer.Token()
@@ -98,7 +101,7 @@ func getPageSummary(url string) (openGraphProps, error) {
 
 	//HINTS: https://info344-s17.github.io/tutorials/tokenizing/
 	//https://godoc.org/golang.org/x/net/html
-
+	return props, nil
 }
 
 //SummaryHandler fetches the URL in the `url` query string parameter, extracts
@@ -120,8 +123,10 @@ func SummaryHandler(w http.ResponseWriter, r *http.Request) {
 	//if no `url` parameter was provided, respond with
 	//an http.StatusBadRequest error and return
 	//HINT: https://golang.org/pkg/net/http/#Error
+
 	if URL == "" {
 		http.Error(w, "no url parameter provided", http.StatusBadRequest)
+		return
 	}
 
 	//call getPageSummary() passing the requested URL
@@ -132,6 +137,7 @@ func SummaryHandler(w http.ResponseWriter, r *http.Request) {
 	graphProps, err := getPageSummary(URL)
 	if err != nil {
 		http.Error(w, "error requesting page summary: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	//otherwise, respond by writing the openGrahProps
