@@ -66,13 +66,38 @@ func getPageSummary(url string) (openGraphProps, error) {
 Loop:
 	for {
 		tt := tokenizer.Next()
-		token := tokenizer.Token()
-		fmt.Println(token.Attr)
+		// fmt.Println(tt)
+		// if tt == html.ErrorToken {
+		// 	eofErr := tokenizer.Err()
+		// 	if eofErr == io.EOF {
+		// 		fmt.Println("at end of file")
+		// 		break
+		// 	} else {
+		// 		fmt.Println(tokenizer.Err())
+		// 	}
+		// }
+		// //if this is a start tag token...
+		// if tt == html.StartTagToken {
+		// 	//get the token
+		// 	token := tokenizer.Token()
+		// 	//if the name of the element is "title"
+		// 	if "title" == token.Data {
+		// 		//the next token should be the page title
+		// 		tt = tokenizer.Next()
+		// 		//just make sure it's actually a text token
+		// 		if tt == html.TextToken {
+		// 			//report the page title and break out of the loop
+		// 			fmt.Println(tokenizer.Token().Data)
+		// 			break
+		// 		}
+		// 	}
+		// }
 		switch tt {
 		case html.ErrorToken:
 			//log.Fatalf("error tokenizing HTML: %v", tokenizer.Err())
-			err := tokenizer.Err()
-			if err == io.EOF {
+			fmt.Printf("at end?")
+			eofErr := tokenizer.Err()
+			if eofErr == io.EOF {
 				break Loop
 			}
 			log.Fatalf("error tokenizing HTML: %v", tokenizer.Err())
@@ -81,11 +106,26 @@ Loop:
 		case html.EndTagToken:
 			token := tokenizer.Token()
 			if token.Data == "head" {
+				fmt.Println("exiting early")
 				break Loop // using the go Label break "Loop"
 			}
 		case html.StartTagToken:
 			token := tokenizer.Token()
 			if token.Data == "meta" {
+				fmt.Println(token.Attr)
+				for i, a := range token.Attr {
+					if strings.HasPrefix(a.Val, openGraphPrefix) {
+						ogKey := strings.TrimPrefix(a.Val, openGraphPrefix)
+						ogVal := token.Attr[i+1].Val
+						//fmt.Printf("Key: %v Val: %v", ogKey, ogVal)
+						props[ogKey] = ogVal
+					}
+				}
+			}
+		case html.SelfClosingTagToken:
+			token := tokenizer.Token()
+			if token.Data == "meta" {
+				fmt.Println(token.Attr)
 				for i, a := range token.Attr {
 					if strings.HasPrefix(a.Val, openGraphPrefix) {
 						ogKey := strings.TrimPrefix(a.Val, openGraphPrefix)
@@ -96,7 +136,6 @@ Loop:
 				}
 			}
 		}
-
 	}
 
 	//HINTS: https://info344-s17.github.io/tutorials/tokenizing/
