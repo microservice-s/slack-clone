@@ -18,32 +18,18 @@ const openGraphPrefix = "og:"
 type openGraphProps map[string]string
 
 func fetchHTML(URL string) (io.ReadCloser, error) {
-
-}
-
-func fetchOpenGraphProps(body io.ReadCloser) (openGraphProps, error) {
-
-}
-
-func getPageSummary(url string) (openGraphProps, error) {
 	//Get the URL
 	//If there was an error, return it
-	res, err := http.Get(url)
+	res, err := http.Get(URL)
 	if err != nil {
 		return nil, err
 	}
-
-	//ensure that the response body stream is closed eventually
-	defer res.Body.Close()
-
-	//HINTS: https://gobyexample.com/defer
-	//https://golang.org/pkg/net/http/#Response
 
 	//if the response StatusCode is >= 400
 	//return an error, using the response's .Status
 	//property as the error message
 	if res.StatusCode >= 400 {
-		return nil, errors.New(res.Status)
+		return res.Body, errors.New(res.Status)
 	}
 
 	//if the response's Content-Type header does not
@@ -52,24 +38,20 @@ func getPageSummary(url string) (openGraphProps, error) {
 	//expecting HTML
 	ctype := res.Header.Get("Content-Type")
 	if !strings.HasPrefix(ctype, "text/html") {
-		return nil, fmt.Errorf("content type: %q, expexted text/html", ctype)
+		return res.Body, fmt.Errorf("content type: %q, expexted text/html", ctype)
 	}
 
+	return res.Body, nil
+}
+
+func fetchOpenGraphProps(body io.ReadCloser) (openGraphProps, error) {
 	//create a new openGraphProps map instance to hold
 	//the Open Graph properties you find
 	//(see type definition above)
 	props := make(openGraphProps)
 
-	//tokenize the response body's HTML and extract
-	//any Open Graph properties you find into the map,
-	//using the Open Graph property name as the key, and the
-	//corresponding content as the value.
-	//strip the openGraphPrefix from the property name before
-	//you add it as a new key, so that the key is just `title`
-	//and not `og:title` (for example).
-
 	//create a new tokenizer over the response body
-	tokenizer := html.NewTokenizer(res.Body)
+	tokenizer := html.NewTokenizer(body)
 Loop:
 	for {
 		tt := tokenizer.Next()
@@ -108,6 +90,108 @@ Loop:
 				}
 			}
 		}
+	}
+
+	return props, nil
+}
+
+func getPageSummary(url string) (openGraphProps, error) {
+
+	// fetch the HTML body
+	body, err := fetchHTML(url)
+	if err != nil {
+		return nil, err
+	}
+	//ensure that the response body stream is closed eventually
+	defer body.Close()
+
+	// //Get the URL
+	// //If there was an error, return it
+	// res, err := http.Get(url)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// //ensure that the response body stream is closed eventually
+	// defer res.Body.Close()
+
+	// //HINTS: https://gobyexample.com/defer
+	// //https://golang.org/pkg/net/http/#Response
+
+	// //if the response StatusCode is >= 400
+	// //return an error, using the response's .Status
+	// //property as the error message
+	// if res.StatusCode >= 400 {
+	// 	return nil, errors.New(res.Status)
+	// }
+
+	// //if the response's Content-Type header does not
+	// //start with "text/html", return an error noting
+	// //what the content type was and that you were
+	// //expecting HTML
+	// ctype := res.Header.Get("Content-Type")
+	// if !strings.HasPrefix(ctype, "text/html") {
+	// 	return nil, fmt.Errorf("content type: %q, expexted text/html", ctype)
+	// }
+
+	//create a new openGraphProps map instance to hold
+	//the Open Graph properties you find
+	//(see type definition above)
+	//props := make(openGraphProps)
+
+	//tokenize the response body's HTML and extract
+	//any Open Graph properties you find into the map,
+	//using the Open Graph property name as the key, and the
+	//corresponding content as the value.
+	//strip the openGraphPrefix from the property name before
+	//you add it as a new key, so that the key is just `title`
+	//and not `og:title` (for example).
+
+	//create a new tokenizer over the response body
+	// 	tokenizer := html.NewTokenizer(body)
+	// Loop:
+	// 	for {
+	// 		tt := tokenizer.Next()
+	// 		switch tt {
+	// 		case html.ErrorToken:
+	// 			// return the error if it is NOT io.EOF (EOF just means we hit the end of the page)
+	// 			eofErr := tokenizer.Err()
+	// 			if eofErr == io.EOF {
+	// 				break Loop
+	// 			}
+	// 			return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())
+	// 		// open graph properties only exist in the head
+	// 		case html.EndTagToken:
+	// 			token := tokenizer.Token()
+	// 			if token.Data == "head" {
+	// 				break Loop // using the go Label break "Loop"
+	// 			}
+	// 		case html.StartTagToken, html.SelfClosingTagToken:
+	// 			token := tokenizer.Token()
+	// 			if token.Data == "meta" {
+	// 				var prop, cont string
+	// 				// get the content and property fields (handles order)
+	// 				for _, a := range token.Attr {
+	// 					switch a.Key {
+	// 					case "property":
+	// 						prop = a.Val
+	// 					case "content":
+	// 						cont = a.Val
+	// 					}
+	// 				}
+	// 				// trim the open graph meta tag property
+	// 				// and then add it to the map with the content
+	// 				if strings.HasPrefix(prop, openGraphPrefix) {
+	// 					ogProp := strings.TrimPrefix(prop, openGraphPrefix)
+	// 					props[ogProp] = cont
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+
+	props, err := fetchOpenGraphProps(body)
+	if err != nil {
+		return nil, err
 	}
 
 	//HINTS: https://info344-s17.github.io/tutorials/tokenizing/
@@ -163,5 +247,4 @@ func SummaryHandler(w http.ResponseWriter, r *http.Request) {
 	if err := encoder.Encode(graphProps); err != nil {
 		http.Error(w, "error encoding json: "+err.Error(), http.StatusInternalServerError)
 	}
-
 }
