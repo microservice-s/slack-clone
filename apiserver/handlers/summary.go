@@ -114,6 +114,7 @@ Loop:
 				}
 				// if we dont have an image tag yet, check the link icon tags
 			} else if _, contains := props["image"]; !contains && token.Data == "link" {
+				// store the rel and href of the link tags
 				var rel, href string
 				for _, a := range token.Attr {
 					switch a.Key {
@@ -123,6 +124,7 @@ Loop:
 						href = a.Val
 					}
 				}
+				// if we found a favicon in one of the link rel properties
 				if rel == "icon" || rel == "shortcut icon" {
 					url, _ := url.Parse(href)
 					if !url.IsAbs() {
