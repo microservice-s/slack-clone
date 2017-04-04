@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"net/url"
+
 	"golang.org/x/net/html"
 )
 
@@ -54,6 +56,7 @@ func fetchOpenGraphProps(body io.ReadCloser) (openGraphProps, error) {
 	tokenizer := html.NewTokenizer(body)
 Loop:
 	for {
+		// get the next token type for the switch
 		tt := tokenizer.Next()
 		switch tt {
 		case html.ErrorToken:
@@ -64,6 +67,7 @@ Loop:
 			}
 			return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())
 		// open graph properties only exist in the head
+		// so we can break early
 		case html.EndTagToken:
 			token := tokenizer.Token()
 			if token.Data == "head" {
@@ -71,8 +75,19 @@ Loop:
 			}
 		case html.StartTagToken, html.SelfClosingTagToken:
 			token := tokenizer.Token()
-			if token.Data == "meta" {
-				var prop, cont string
+			// EXTRA CREDIT FALLBACK title
+			// check if the props map doesn't already contain a title
+			if _, contains := props["title"]; !contains && token.Data == "title" {
+				//the next token should be the page title
+				tt = tokenizer.Next()
+				// make sure that it's actually a text token
+				if tt == html.TextToken {
+					props["title"] = tokenizer.Token().Data
+					break // break to continue the loop
+				}
+				// look for property and content fields in only meta tags
+			} else if token.Data == "meta" {
+				var prop, cont, name string
 				// get the content and property fields (handles order)
 				for _, a := range token.Attr {
 					switch a.Key {
@@ -80,6 +95,8 @@ Loop:
 						prop = a.Val
 					case "content":
 						cont = a.Val
+					case "name":
+						name = a.Val
 					}
 				}
 				// trim the open graph meta tag property
@@ -87,6 +104,27 @@ Loop:
 				if strings.HasPrefix(prop, openGraphPrefix) {
 					ogProp := strings.TrimPrefix(prop, openGraphPrefix)
 					props[ogProp] = cont
+				} else if _, contains := props["description"]; !contains && name == "description" {
+					props[name] = cont
+				}
+				// if we dont have an image tag yet, check the link icon tags
+				//else if _, contains := props["image"]; !contains &&
+			} else if token.Data == "link" {
+				var rel, href string
+				for _, a := range token.Attr {
+					switch a.Key {
+					case "rel":
+						rel = a.Val
+					case "href":
+						href = a.Val
+					}
+				}
+				if rel == "icon" || rel == "shortcut icon" {
+					url, _ := url.Parse(href)
+					if !url.IsAbs() {
+
+						fmt.Printf("URL %vIS NOT ABSOLUTE", url)
+					}
 				}
 			}
 		}
