@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -17,6 +16,14 @@ const openGraphPrefix = "og:"
 
 //openGraphProps represents a map of open graph property names and values
 type openGraphProps map[string]string
+
+func fetchHTML(URL string) (io.ReadCloser, error) {
+
+}
+
+func fetchOpenGraphProps(body io.ReadCloser) (openGraphProps, error) {
+
+}
 
 func getPageSummary(url string) (openGraphProps, error) {
 	//Get the URL
@@ -66,73 +73,38 @@ func getPageSummary(url string) (openGraphProps, error) {
 Loop:
 	for {
 		tt := tokenizer.Next()
-		// fmt.Println(tt)
-		// if tt == html.ErrorToken {
-		// 	eofErr := tokenizer.Err()
-		// 	if eofErr == io.EOF {
-		// 		fmt.Println("at end of file")
-		// 		break
-		// 	} else {
-		// 		fmt.Println(tokenizer.Err())
-		// 	}
-		// }
-		// //if this is a start tag token...
-		// if tt == html.StartTagToken {
-		// 	//get the token
-		// 	token := tokenizer.Token()
-		// 	//if the name of the element is "title"
-		// 	if "title" == token.Data {
-		// 		//the next token should be the page title
-		// 		tt = tokenizer.Next()
-		// 		//just make sure it's actually a text token
-		// 		if tt == html.TextToken {
-		// 			//report the page title and break out of the loop
-		// 			fmt.Println(tokenizer.Token().Data)
-		// 			break
-		// 		}
-		// 	}
-		// }
 		switch tt {
 		case html.ErrorToken:
-			//log.Fatalf("error tokenizing HTML: %v", tokenizer.Err())
-			fmt.Printf("at end?")
+			// return the error if it is NOT io.EOF (EOF just means we hit the end of the page)
 			eofErr := tokenizer.Err()
 			if eofErr == io.EOF {
 				break Loop
 			}
-			log.Fatalf("error tokenizing HTML: %v", tokenizer.Err())
-			//return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())``
+			return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())
 		// open graph properties only exist in the head
 		case html.EndTagToken:
 			token := tokenizer.Token()
 			if token.Data == "head" {
-				fmt.Println("exiting early")
 				break Loop // using the go Label break "Loop"
 			}
-		case html.StartTagToken:
+		case html.StartTagToken, html.SelfClosingTagToken:
 			token := tokenizer.Token()
 			if token.Data == "meta" {
-				fmt.Println(token.Attr)
-				for i, a := range token.Attr {
-					if strings.HasPrefix(a.Val, openGraphPrefix) {
-						ogKey := strings.TrimPrefix(a.Val, openGraphPrefix)
-						ogVal := token.Attr[i+1].Val
-						//fmt.Printf("Key: %v Val: %v", ogKey, ogVal)
-						props[ogKey] = ogVal
+				var prop, cont string
+				// get the content and property fields (handles order)
+				for _, a := range token.Attr {
+					switch a.Key {
+					case "property":
+						prop = a.Val
+					case "content":
+						cont = a.Val
 					}
 				}
-			}
-		case html.SelfClosingTagToken:
-			token := tokenizer.Token()
-			if token.Data == "meta" {
-				fmt.Println(token.Attr)
-				for i, a := range token.Attr {
-					if strings.HasPrefix(a.Val, openGraphPrefix) {
-						ogKey := strings.TrimPrefix(a.Val, openGraphPrefix)
-						ogVal := token.Attr[i+1].Val
-						//fmt.Printf("Key: %v Val: %v", ogKey, ogVal)
-						props[ogKey] = ogVal
-					}
+				// trim the open graph meta tag property
+				// and then add it to the map with the content
+				if strings.HasPrefix(prop, openGraphPrefix) {
+					ogProp := strings.TrimPrefix(prop, openGraphPrefix)
+					props[ogProp] = cont
 				}
 			}
 		}
@@ -163,7 +135,7 @@ func SummaryHandler(w http.ResponseWriter, r *http.Request) {
 	//an http.StatusBadRequest error and return
 	//HINT: https://golang.org/pkg/net/http/#Error
 
-	if URL == "" {
+	if len(URL) == 0 {
 		http.Error(w, "no url parameter provided", http.StatusBadRequest)
 		return
 	}
