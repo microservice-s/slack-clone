@@ -30,6 +30,7 @@ func main() {
 	if len(host) == 0 {
 		host = ""
 	}
+	// concat the host and port to a valid address
 	addr := host + ":" + port
 	//add your handlers.SummaryHandler function as a handler
 	//for the apiSummary route
