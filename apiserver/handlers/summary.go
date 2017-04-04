@@ -62,7 +62,7 @@ Loop:
 		case html.ErrorToken:
 			// return the error if it is NOT io.EOF (EOF just means we hit the end of the page)
 			eofErr := tokenizer.Err()
-			if eofErr == io.EOF {
+			if eofErr == io.EOF && eofErr != nil {
 				break Loop
 			}
 			return nil, fmt.Errorf("error tokenizing HTML: %v", tokenizer.Err())
@@ -137,11 +137,11 @@ func getPageSummary(url string) (openGraphProps, error) {
 
 	// fetch the HTML body
 	body, err := fetchHTML(url)
+	//ensure that the response body stream is closed eventually
+	defer body.Close()
 	if err != nil {
 		return nil, err
 	}
-	//ensure that the response body stream is closed eventually
-	defer body.Close()
 
 	// //Get the URL
 	// //If there was an error, return it
