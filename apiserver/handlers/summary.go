@@ -10,6 +10,8 @@ import (
 
 	"net/url"
 
+	"path"
+
 	"golang.org/x/net/html"
 )
 
@@ -46,7 +48,7 @@ func fetchHTML(URL string) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func fetchOpenGraphProps(body io.ReadCloser) (openGraphProps, error) {
+func fetchOpenGraphProps(body io.ReadCloser, URL string) (openGraphProps, error) {
 	//create a new openGraphProps map instance to hold
 	//the Open Graph properties you find
 	//(see type definition above)
@@ -108,8 +110,7 @@ Loop:
 					props[name] = cont
 				}
 				// if we dont have an image tag yet, check the link icon tags
-				//else if _, contains := props["image"]; !contains &&
-			} else if token.Data == "link" {
+			} else if _, contains := props["image"]; !contains && token.Data == "link" {
 				var rel, href string
 				for _, a := range token.Attr {
 					switch a.Key {
@@ -122,11 +123,24 @@ Loop:
 				if rel == "icon" || rel == "shortcut icon" {
 					url, _ := url.Parse(href)
 					if !url.IsAbs() {
-
-						fmt.Printf("URL %vIS NOT ABSOLUTE", url)
+						urlSt := path.Join(URL, url.String())
+						props["image"] = urlSt
+						fmt.Printf("URL %vIS NOT ABSOLUTE\n", url)
+					} else {
+						urlSt := path.Join(URL, url.String())
+						props["image"] = urlSt
 					}
 				}
 			}
+		}
+	}
+
+	// if we still didn't get an image, check the root dir for a favicon
+	if _, contains := props["image"]; !contains {
+		favicon := URL + "/favicon.ico"
+		_, err := http.Get(favicon)
+		if err == nil {
+			props["image"] = favicon
 		}
 	}
 
@@ -227,7 +241,7 @@ func getPageSummary(url string) (openGraphProps, error) {
 	// 		}
 	// 	}
 
-	props, err := fetchOpenGraphProps(body)
+	props, err := fetchOpenGraphProps(body, url)
 	if err != nil {
 		return nil, err
 	}
