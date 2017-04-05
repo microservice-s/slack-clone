@@ -31,7 +31,7 @@ func main() {
 		host = ""
 	}
 	// concat the host and port to a valid address
-	addr := host + ":" + port
+	addr := fmt.Sprintf("%s:%s", host, port)
 	//add your handlers.SummaryHandler function as a handler
 	//for the apiSummary route
 	//HINT: https://golang.org/pkg/net/http/#HandleFunc
