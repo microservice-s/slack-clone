@@ -1,7 +1,6 @@
-console.log("test");
-
-function loadOGP(e) {
-    if (e.preventDefault) { e.preventDefault(); }
+function loadOGP() {
+    console.log("test");
+    event.preventDefault();
 
     var title = document.getElementById("title")
     var description = document.getElementById("description")
@@ -9,7 +8,7 @@ function loadOGP(e) {
     var urlForm = document.getElementById("urlForm")
     console.log("Why isn't this getting called?");
 
-    fetch('http://localhost:4000/v1/summary?url=' + urlForm.value, {
+    fetch('localhost:4000/v1/summary?url=' + urlForm.value, {
         method: 'get'
     }).then(function(resp) {
         //console.log(resp)
