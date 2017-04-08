@@ -7,22 +7,26 @@
     <title>INFO 344 - Open Graph Summarizer</title>
 
     <link rel="stylesheet" type="text/css" href="style.css">
-    <script type="text/javascript" src="script.js"></script>
+    <script type="text/javascript" src="script.js" defer></script>
 </head>
 <body>
     <h1>Open Graph Summarizer</h1>
     <p>This is just a placeholder that you will replace with your web client.</p>
-    <form onsubmit="return loadOGP()">
-        <input type="text" name="" id="urlForm">
-        <input type="submit" name="">
-    </form>
-    
-    <div class="ogp-card">
-        <img src="" alt="" id="image">
-        <div class="container">
-            <h2 id="title"></h2>
-            <p id="description"></p>
+    <div>
+        <form id="form">
+            <input type="url" name="url" id="urlSubmit">
+            <input type="submit" name="">
+        </form>
+        <div id="ogp-card">
+            <img src="" alt="" id="image">
+            <div class="container">
+                <h2 id="title"></h2>
+                <p id="description"></p>
+            </div>
         </div>
     </div>
+    
+    
+    
 </body>
 </html>

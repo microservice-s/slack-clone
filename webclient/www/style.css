@@ -1,7 +1,15 @@
-.ogp-card {
+
+#form {
+    text-align: center;
+}
+
+#ogp-card {
+    text-align: center;
+    display: inline-block;
     /* Add shadows to create the "card" effect */
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
     transition: 0.3s;
+   
 }
 
 /* Add some padding inside the card container */
@@ -10,5 +18,7 @@
 }
 
 #image {
+    height: 20em;
+    width: 20em;
     float: left
 }
