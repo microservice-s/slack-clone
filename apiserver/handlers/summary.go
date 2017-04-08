@@ -21,34 +21,6 @@ const openGraphPrefix = "og:"
 //openGraphProps represents a map of open graph property names and values
 type openGraphProps map[string]string
 
-// fetchHTML fetches the html body from the given url
-func fetchHTML(URL string) (io.ReadCloser, error) {
-	//Get the URL
-	//If there was an error, return it
-	res, err := http.Get(URL)
-	if err != nil {
-		return nil, err
-	}
-
-	//if the response StatusCode is >= 400
-	//return an error, using the response's .Status
-	//property as the error message
-	if res.StatusCode >= 400 {
-		return res.Body, errors.New(res.Status)
-	}
-
-	//if the response's Content-Type header does not
-	//start with "text/html", return an error noting
-	//what the content type was and that you were
-	//expecting HTML
-	ctype := res.Header.Get("Content-Type")
-	if !strings.HasPrefix(ctype, "text/html") {
-		return res.Body, fmt.Errorf("content type: %q, expexted text/html", ctype)
-	}
-
-	return res.Body, nil
-}
-
 // fetchOpenGraphProps tokenizes and stores the open graph properties
 // from a html body
 func fetchOpenGraphProps(body io.ReadCloser, URL string) (openGraphProps, error) {
@@ -154,16 +126,33 @@ Loop:
 // getPageSummary fetches a webpage and returns it's open graph properties summary
 func getPageSummary(url string) (openGraphProps, error) {
 
-	// fetch the HTML body
-	body, err := fetchHTML(url)
-	//ensure that the response body stream is closed eventually
-	defer body.Close()
+	//Get the URL
+	//If there was an error, return it
+	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
+	//ensure that the response body stream is closed eventually
+	defer res.Body.Close()
+
+	//if the response StatusCode is >= 400
+	//return an error, using the response's .Status
+	//property as the error message
+	if res.StatusCode >= 400 {
+		return nil, errors.New(res.Status)
+	}
+
+	//if the response's Content-Type header does not
+	//start with "text/html", return an error noting
+	//what the content type was and that you were
+	//expecting HTML
+	ctype := res.Header.Get("Content-Type")
+	if !strings.HasPrefix(ctype, "text/html") {
+		return nil, fmt.Errorf("content type: %q, expexted text/html", ctype)
+	}
 
 	// tokenize and fetch the open graph properties from the url body
-	props, err := fetchOpenGraphProps(body, url)
+	props, err := fetchOpenGraphProps(res.Body, url)
 	if err != nil {
 		return nil, err
 	}
