@@ -80,7 +80,12 @@ Loop:
 				// and then add it to the map with the content
 				if strings.HasPrefix(prop, openGraphPrefix) {
 					ogProp := strings.TrimPrefix(prop, openGraphPrefix)
-					props[ogProp] = cont
+					// if we have an image property and it's not an absolute url ( like http:// )
+					if url, _ := url.Parse(cont); !url.IsAbs() && ogProp == "image" {
+						props[ogProp] = path.Join(URL, cont)
+					} else {
+						props[ogProp] = cont
+					}
 				} else if _, contains := props["description"]; !contains && name == "description" {
 					props[name] = cont
 				}
@@ -99,12 +104,16 @@ Loop:
 				// if we found a favicon in one of the link rel properties
 				if rel == "icon" || rel == "shortcut icon" {
 					url, _ := url.Parse(href)
-					if !url.IsAbs() {
+					if !url.IsAbs() && !strings.HasPrefix(url.String(), "//www") {
+						fmt.Println(url.String())
 						urlSt := path.Join(URL, url.String())
+						fmt.Printf(urlSt)
 						props["image"] = urlSt
+						// handle the case that the url just starts with www
+					} else if strings.HasPrefix(url.String(), "//www") {
+						props["image"] = fmt.Sprintf("http://%v", strings.TrimPrefix(url.String(), "//"))
 					} else {
-						urlSt := path.Join(URL, url.String())
-						props["image"] = urlSt
+						props["image"] = url.String()
 					}
 				}
 			}

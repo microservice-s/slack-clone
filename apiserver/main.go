@@ -23,12 +23,9 @@ func main() {
 	// PORT - port number to listen on for HTTP requests (if not set, use defaultPort)
 	// HOST - host address to respond to (if not set, leave empty, which means any host)
 	port := os.Getenv("PORT")
+	host := os.Getenv("HOST")
 	if len(port) == 0 {
 		port = defaultPort
-	}
-	host := os.Getenv("HOST")
-	if len(host) == 0 {
-		host = ""
 	}
 	// concat the host and port to a valid address
 	addr := fmt.Sprintf("%s:%s", host, port)
