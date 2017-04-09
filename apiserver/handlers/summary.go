@@ -34,7 +34,8 @@ func fetchHTML(URL string) (io.ReadCloser, error) {
 	//return an error, using the response's .Status
 	//property as the error message
 	if res.StatusCode >= 400 {
-		return res.Body, errors.New(res.Status)
+
+		return nil, errors.New(res.Status)
 	}
 
 	//if the response's Content-Type header does not
@@ -43,7 +44,7 @@ func fetchHTML(URL string) (io.ReadCloser, error) {
 	//expecting HTML
 	ctype := res.Header.Get("Content-Type")
 	if !strings.HasPrefix(ctype, "text/html") {
-		return res.Body, fmt.Errorf("content type: %q, expexted text/html", ctype)
+		return nil, fmt.Errorf("content type: %q, expexted text/html", ctype)
 	}
 
 	return res.Body, nil
@@ -157,10 +158,10 @@ func getPageSummary(url string) (openGraphProps, error) {
 	// fetch the HTML body
 	body, err := fetchHTML(url)
 	//ensure that the response body stream is closed eventually
-	defer body.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	// tokenize and fetch the open graph properties from the url body
 	props, err := fetchOpenGraphProps(body, url)
