@@ -1,4 +1,5 @@
 var form = document.getElementById("form")
+
 if (form.attachEvent) {
     form.attachEvent("submit", loadOGP);
 } else {
@@ -19,10 +20,10 @@ function json(response) {
 function loadOGP(e) {
     if (e.preventDefault) e.preventDefault();
 
-    var title = document.getElementById("title")
-    var description = document.getElementById("description")
-    var image = document.getElementById("image")
-    var urlSubmit = document.getElementById("urlSubmit")
+    var title = document.getElementById("title");
+    var description = document.getElementById("description");
+    var image = document.getElementById("image");
+    var urlSubmit = document.getElementById("urlSubmit");
     console.log(urlSubmit.value);
 
     fetch('http://localhost:4000/v1/summary?url=' + urlSubmit.value)
