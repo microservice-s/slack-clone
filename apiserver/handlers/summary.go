@@ -123,9 +123,14 @@ Loop:
 	// if we still didn't get an image, check the root dir for a favicon
 	if _, contains := props["image"]; !contains {
 		favicon := URL + "/favicon.ico"
-		_, err := http.Get(favicon)
+		res, err := http.Get(favicon)
 		if err == nil {
-			props["image"] = favicon
+			// then check the header type of the response body to make sure it's an image
+			ctype := res.Header.Get("Content-Type")
+			if strings.HasPrefix(ctype, "image") {
+				fmt.Println(ctype)
+				props["image"] = favicon
+			}
 		}
 	}
 

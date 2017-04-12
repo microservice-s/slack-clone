@@ -1,5 +1,5 @@
 #cloud-config
 runcmd:
-  - ufw allow OpenSSh
+  - ufw allow OpenSSH
   - ufw --force enable
   - docker run --name apiserver -d -p 80:80 aethan/apiserver
