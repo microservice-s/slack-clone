@@ -2,13 +2,14 @@
 > [example.com](http://example.com)
 
 ##### 2. Did you receive any help from others (classmates, etc)? If so, please list who. #####
-> 
+> I talked with Brendan about the ideas of doing the extra credit. I went to DJ Stearns' office hours as well.
 
 ##### 3. Did you complete any Advanced Extra Credit Opportunities for this challenge? If so, what? #####
-> 
+> I did all of the credit that was listed on the spec + a little more. My server falls back to <title> for the og:title, name="description" for the og:description, and <link rel="icon" for the og:image.
+> I also created a function that checks for a favicon in the root dir IF there isn't an og:image or if there isn't a favicon listed
 
 ##### 4. Approximately how many hours did it take you to complete this challenge? #####
-> 
+> 5? 
 
 ##### 5. Did you encounter any problems in this challenge we should warn students about in the future? How can we make the challenge better? #####
-> 
+> Nope! it was excellent
