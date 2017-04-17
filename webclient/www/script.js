@@ -27,7 +27,7 @@ function json(response) {
 
 function loadOGP(e) {
     if (e.preventDefault) e.preventDefault();
-    fetch('http://138.68.55.2/v1/summary?url=' + urlSubmit.value)
+    fetch('https://api.aethanol.me/v1/summary?url=' + urlSubmit.value)
         .then(status)
         .then(json)
         .then(function(data) {
