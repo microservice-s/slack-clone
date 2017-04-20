@@ -3,6 +3,10 @@ package sessions
 import (
 	"time"
 
+	"encoding/json"
+
+	"errors"
+
 	"gopkg.in/redis.v5"
 )
 
@@ -11,6 +15,7 @@ import (
 //separate from other keys in the shared redis key
 //namespace.
 const redisKeyPrefix = "sid:"
+const defaultAddr = "127.0.0.1:6379"
 
 //RedisStore represents a session.Store backed by redis.
 type RedisStore struct {
@@ -30,12 +35,24 @@ func NewRedisStore(client *redis.Client, sessionDuration time.Duration) *RedisSt
 	//pointing at a redis instance on the same machine
 	//i.e., Addr is "127.0.0.1"
 
+	if client == nil {
+		roptions := redis.Options{
+			Addr: defaultAddr,
+		}
+		client = redis.NewClient(&roptions)
+	}
+
 	//if `sessionDuration` is < 0
 	//set it to DefaultSessionDuration
-
+	if sessionDuration < 0 {
+		sessionDuration = DefaultSessionDuration
+	}
 	//return a new RedisStore with the Client field set to `client`
 	//and the SessionDuration field set to `sessionDuration`
-	return nil
+	return &RedisStore{
+		Client:          client,
+		SessionDuration: sessionDuration,
+	}
 }
 
 //Store implementation
@@ -43,37 +60,73 @@ func NewRedisStore(client *redis.Client, sessionDuration time.Duration) *RedisSt
 //Save associates the provided `state` data with the provided `sid` in the store.
 func (rs *RedisStore) Save(sid SessionID, state interface{}) error {
 	//encode the `state` into JSON
-
+	jbuf, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
 	//use the redis client's Set() method, using `sid.getRedisKey()`
 	//as the key, the JSON as the data, and the store's session duration
 	//as the expiration
-
+	status := rs.Client.Set(sid.getRedisKey(), jbuf, rs.SessionDuration)
 	//Set() returns a StatusCmd, which has an .Err() method that will
 	//report any error that occurred; return the result of that method
-	return nil
+	return status.Err()
 }
 
 //Get retrieves the previously saved data for the session id,
 //and populates the `state` parameter with it. This will also
 //reset the data's time to live in the store.
 func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
+
+	// EXTRA CREDIT using the pipeline feature
+	// to do the .Get() and .Expire() commands
+	// in just one round-trip!
+	pipe := rs.Client.Pipeline()
+	pipe.Get(sid.getRedisKey())
+	pipe.Expire(sid.getRedisKey(), rs.SessionDuration)
+	// execute the pipeline and check for errors
+	resp, err := pipe.Exec()
+	if err != nil {
+		if err == redis.Nil {
+			return ErrStateNotFound
+		}
+		return err
+	}
+	// get the underlying StringCmd and check if it type asserted properly
+	cmd, ok := resp[0].(*redis.StringCmd)
+	if ok == false {
+		return errors.New("error type asserting redis resp")
+	}
+	// get the bytes array from the redis response and return if err
+	jbuf, err := cmd.Bytes()
+	if err != nil {
+		return err
+	}
+
+	// jbuf, err := resp[0].(*redis.StringCmd).Bytes()
+	// fmt.Println(jbuf, err)
+	// fmt.Println(jbuf, err)
 	//use the .Get() method to get the data associated
 	//with the key `sid.getRedisKey()`
+	//jbuf, err := rs.Client.Get(sid.getRedisKey()).Bytes()
 
 	//if the Get command returned an error,
 	//return ErrStateNotFound if the error == redis.Nil
 	//otherwise return the error
+	// if err != nil {
+	// 	if err == redis.Nil {
+	// 		return ErrStateNotFound
+	// 	}
+	// 	return err
+	// }
 
 	//get the returned bytes and Unmarshal them into
 	//the `state` parameter
 	//if you get an error, return it
-
-	//use the .Expire() command to reset the expiry duration
-	//to the store's session duration
-
-	//for EXTRA CREDIT use the Pipeline feature
-	//to do the .Get() and .Expire() commands
-	//in just one round-trip!
+	err = json.Unmarshal(jbuf, &state)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -83,6 +136,10 @@ func (rs *RedisStore) Delete(sid SessionID) error {
 	//use the .Del() method to delete the data associated
 	//with the key `sid.getRedisKey()`, and use .Err()
 	//to report any errors that occurred
+	err := rs.Client.Del(sid.getRedisKey()).Err()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
