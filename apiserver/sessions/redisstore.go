@@ -5,8 +5,6 @@ import (
 
 	"encoding/json"
 
-	"errors"
-
 	"gopkg.in/redis.v5"
 )
 
@@ -82,43 +80,23 @@ func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
 	// to do the .Get() and .Expire() commands
 	// in just one round-trip!
 	pipe := rs.Client.Pipeline()
-	pipe.Get(sid.getRedisKey())
+	cmd := pipe.Get(sid.getRedisKey())
 	pipe.Expire(sid.getRedisKey(), rs.SessionDuration)
 	// execute the pipeline and check for errors
-	resp, err := pipe.Exec()
+	_, err := pipe.Exec()
+	// the err of the pipe exec will be the first error returned
+	// check if it's the redis.Nil error meaning that the looked up key doesn't exist
 	if err != nil {
 		if err == redis.Nil {
 			return ErrStateNotFound
 		}
 		return err
 	}
-	// get the underlying StringCmd and check if it type asserted properly
-	cmd, ok := resp[0].(*redis.StringCmd)
-	if ok == false {
-		return errors.New("error type asserting redis resp")
-	}
-	// get the bytes array from the redis response and return if err
+	// get the bytes from the get response and err
 	jbuf, err := cmd.Bytes()
 	if err != nil {
 		return err
 	}
-
-	// jbuf, err := resp[0].(*redis.StringCmd).Bytes()
-	// fmt.Println(jbuf, err)
-	// fmt.Println(jbuf, err)
-	//use the .Get() method to get the data associated
-	//with the key `sid.getRedisKey()`
-	//jbuf, err := rs.Client.Get(sid.getRedisKey()).Bytes()
-
-	//if the Get command returned an error,
-	//return ErrStateNotFound if the error == redis.Nil
-	//otherwise return the error
-	// if err != nil {
-	// 	if err == redis.Nil {
-	// 		return ErrStateNotFound
-	// 	}
-	// 	return err
-	// }
 
 	//get the returned bytes and Unmarshal them into
 	//the `state` parameter

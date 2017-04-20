@@ -21,8 +21,8 @@ func TestNewID(t *testing.T) {
 	}
 
 	sid2, err := ValidateID(sid.String(), testSigningKey)
-	fmt.Printf("generated: %v \n expected: %v\n", sid, sid2)
 	if nil != err {
+		fmt.Printf("generated: %v \n expected: %v\n", sid, sid2)
 		t.Fatal(err)
 	}
 
