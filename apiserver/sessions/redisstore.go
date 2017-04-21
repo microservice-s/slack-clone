@@ -92,6 +92,7 @@ func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
 		}
 		return err
 	}
+
 	// get the bytes from the get response and err
 	jbuf, err := cmd.Bytes()
 	if err != nil {
@@ -105,7 +106,6 @@ func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
