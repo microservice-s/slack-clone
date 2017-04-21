@@ -29,7 +29,7 @@ func (mus *MemStore) GetAll() ([]*User, error) {
 }
 
 //GetByID returns the User with the given ID
-func (mus *MemStore) GetByID(id UserID) (*User, error) {
+func (mus *MemStore) GetByID(id interface{}) (*User, error) {
 	for _, u := range mus.entries {
 		if u.ID == id {
 			return u, nil

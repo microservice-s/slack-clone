@@ -28,11 +28,11 @@ type RedisStore struct {
 //pointing at a local redis instance. If `sessionDuration`` is negative, it will
 //be set to `DefaultSessionDuration`.
 func NewRedisStore(client *redis.Client, sessionDuration time.Duration) *RedisStore {
+
 	//set defaults for parameters
 	//if `client` is nil, set it to a redis.NewClient()
 	//pointing at a redis instance on the same machine
 	//i.e., Addr is "127.0.0.1"
-
 	if client == nil {
 		roptions := redis.Options{
 			Addr: defaultAddr,
