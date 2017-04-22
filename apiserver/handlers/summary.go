@@ -21,35 +21,6 @@ const openGraphPrefix = "og:"
 //openGraphProps represents a map of open graph property names and values
 type openGraphProps map[string]string
 
-// fetchHTML fetches the html body from the given url
-func fetchHTML(URL string) (io.ReadCloser, error) {
-	//Get the URL
-	//If there was an error, return it
-	res, err := http.Get(URL)
-	if err != nil {
-		return nil, err
-	}
-
-	//if the response StatusCode is >= 400
-	//return an error, using the response's .Status
-	//property as the error message
-	if res.StatusCode >= 400 {
-
-		return nil, errors.New(res.Status)
-	}
-
-	//if the response's Content-Type header does not
-	//start with "text/html", return an error noting
-	//what the content type was and that you were
-	//expecting HTML
-	ctype := res.Header.Get("Content-Type")
-	if !strings.HasPrefix(ctype, "text/html") {
-		return nil, fmt.Errorf("content type: %q, expexted text/html", ctype)
-	}
-
-	return res.Body, nil
-}
-
 // fetchOpenGraphProps tokenizes and stores the open graph properties
 // from a html body
 func fetchOpenGraphProps(body io.ReadCloser, URL string) (openGraphProps, error) {
@@ -109,7 +80,12 @@ Loop:
 				// and then add it to the map with the content
 				if strings.HasPrefix(prop, openGraphPrefix) {
 					ogProp := strings.TrimPrefix(prop, openGraphPrefix)
-					props[ogProp] = cont
+					// if we have an image property and it's not an absolute url ( like http:// )
+					if url, _ := url.Parse(cont); !url.IsAbs() && ogProp == "image" {
+						props[ogProp] = path.Join(URL, cont)
+					} else {
+						props[ogProp] = cont
+					}
 				} else if _, contains := props["description"]; !contains && name == "description" {
 					props[name] = cont
 				}
@@ -128,12 +104,16 @@ Loop:
 				// if we found a favicon in one of the link rel properties
 				if rel == "icon" || rel == "shortcut icon" {
 					url, _ := url.Parse(href)
-					if !url.IsAbs() {
+					if !url.IsAbs() && !strings.HasPrefix(url.String(), "//www") {
+						fmt.Println(url.String())
 						urlSt := path.Join(URL, url.String())
+						fmt.Printf(urlSt)
 						props["image"] = urlSt
+						// handle the case that the url just starts with www
+					} else if strings.HasPrefix(url.String(), "//www") {
+						props["image"] = fmt.Sprintf("http://%v", strings.TrimPrefix(url.String(), "//"))
 					} else {
-						urlSt := path.Join(URL, url.String())
-						props["image"] = urlSt
+						props["image"] = url.String()
 					}
 				}
 			}
@@ -143,9 +123,14 @@ Loop:
 	// if we still didn't get an image, check the root dir for a favicon
 	if _, contains := props["image"]; !contains {
 		favicon := URL + "/favicon.ico"
-		_, err := http.Get(favicon)
+		res, err := http.Get(favicon)
 		if err == nil {
-			props["image"] = favicon
+			// then check the header type of the response body to make sure it's an image
+			ctype := res.Header.Get("Content-Type")
+			if strings.HasPrefix(ctype, "image") {
+				fmt.Println(ctype)
+				props["image"] = favicon
+			}
 		}
 	}
 
@@ -155,16 +140,33 @@ Loop:
 // getPageSummary fetches a webpage and returns it's open graph properties summary
 func getPageSummary(url string) (openGraphProps, error) {
 
-	// fetch the HTML body
-	body, err := fetchHTML(url)
-	//ensure that the response body stream is closed eventually
+	//Get the URL
+	//If there was an error, return it
+	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer body.Close()
+	//ensure that the response body stream is closed eventually
+	defer res.Body.Close()
+
+	//if the response StatusCode is >= 400
+	//return an error, using the response's .Status
+	//property as the error message
+	if res.StatusCode >= 400 {
+		return nil, errors.New(res.Status)
+	}
+
+	//if the response's Content-Type header does not
+	//start with "text/html", return an error noting
+	//what the content type was and that you were
+	//expecting HTML
+	ctype := res.Header.Get("Content-Type")
+	if !strings.HasPrefix(ctype, "text/html") {
+		return nil, fmt.Errorf("content type: %q, expexted text/html", ctype)
+	}
 
 	// tokenize and fetch the open graph properties from the url body
-	props, err := fetchOpenGraphProps(body, url)
+	props, err := fetchOpenGraphProps(res.Body, url)
 	if err != nil {
 		return nil, err
 	}
