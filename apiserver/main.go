@@ -9,7 +9,7 @@ import (
 	"github.com/aethanol/challenges-aethanol/apiserver/handlers"
 )
 
-const defaultPort = "80"
+const defaultPort = "443"
 
 const (
 	apiRoot    = "/v1/"
@@ -29,6 +29,12 @@ func main() {
 	}
 	// concat the host and port to a valid address
 	addr := fmt.Sprintf("%s:%s", host, port)
+
+	//get the TLS key and cert paths from environment variables
+	//this allows us to use a self-signed cert/key during development
+	//and the Let's Encrypt cert/key in production
+	tlsKeyPath := os.Getenv("TLSKEY")
+	tlsCertPath := os.Getenv("TLSCERT")
 	//add your handlers.SummaryHandler function as a handler
 	//for the apiSummary route
 	//HINT: https://golang.org/pkg/net/http/#HandleFunc
@@ -38,5 +44,5 @@ func main() {
 	//any errors that occur if the server can't start
 	//HINT: https://golang.org/pkg/net/http/#ListenAndServe
 	fmt.Printf("server is listening at %s...\n", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Fatal(http.ListenAndServeTLS(addr, tlsCertPath, tlsKeyPath, nil))
 }
