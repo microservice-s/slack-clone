@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net/mail"
 
 	"golang.org/x/crypto/bcrypt"
@@ -81,12 +80,13 @@ func (nu *NewUser) ToUser() (*User, error) {
 	//hash of the new user's email address, converting
 	//that to a hex string, and appending it to their base URL:
 	//https://www.gravatar.com/avatar/ + hex-encoded md5 hash of email
-	h := md5.New()
-	_, err := io.WriteString(h, nu.Email)
-	if err != nil {
-		return nil, err
-	}
-	buf := h.Sum(nil)
+	buf := md5.Sum([]byte(nu.Email))
+	// h := md5.New()
+	// _, err := io.WriteString(h, nu.Email)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// buf := h.Sum(nil)
 	//construct a new User setting the various fields
 	//but don't assign a new ID here--do that in your
 	//concrete Store.Insert() method
@@ -95,7 +95,7 @@ func (nu *NewUser) ToUser() (*User, error) {
 		UserName:  nu.UserName,
 		FirstName: nu.FirstName,
 		LastName:  nu.LastName,
-		PhotoURL:  fmt.Sprintf("%s%s", gravatarBasePhotoURL, hex.EncodeToString(buf)),
+		PhotoURL:  fmt.Sprintf("%s%s", gravatarBasePhotoURL, hex.EncodeToString(buf[:])),
 	}
 	//call the User's SetPassword() method to set the password,
 	//which will hash the plaintext password
