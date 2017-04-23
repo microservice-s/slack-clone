@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
@@ -90,6 +91,7 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// SessionsHandler allows existing users to sign-in
 func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 	// The request method must be "POST"
 	if r.Method != "POST" {
@@ -134,6 +136,7 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// SessionsMineHandler allows authenticated users to sign-out
 func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) {
 	// The request method must be "DELETE"
 	if r.Method != "DELETE" {
@@ -153,12 +156,21 @@ func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// Respond to the client with a simple message saying that the user has been signed out
-	w.Write()
+	io.WriteString(w, "user signed out\n")
 }
 
+// UsersMeHanlder allows a users to get their current session state
 func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
-
 	// Get the session state
+	state := &SessionState{}
+	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, state)
+	if err != nil {
+		http.Error(w, "error getting session state"+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	// Respond to the client with the session state's User field, encoded as a JSON object
+	w.Header().Add(headerContentType, contentTypeJSONUTF8)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(state)
 
 }
