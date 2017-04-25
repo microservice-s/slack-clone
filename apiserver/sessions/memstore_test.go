@@ -40,7 +40,7 @@ func TestMemStore(t *testing.T) {
 	}
 
 	state3 := &State{}
-	err = memstore.Get(sid, state2)
+	err = memstore.Get(sid, state3)
 	if ErrStateNotFound != err {
 		t.Fatal(err)
 	}

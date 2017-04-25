@@ -30,20 +30,29 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		// validate the new user
 		if err := user.Validate(); err != nil {
 			http.Error(w, "error validating user: "+err.Error(),
-				http.StatusInternalServerError)
+				http.StatusBadRequest)
 			return
 		}
+
 		// Ensure there isn't already a user in the UserStore with the same email address
-		if usr, err := ctx.UserStore.GetByEmail(user.Email); usr != nil {
-			http.Error(w, "Error: email already exists in database: "+err.Error(),
-				http.StatusInternalServerError)
+		// by just checking UserNotFound err, then any
+		if _, err := ctx.UserStore.GetByEmail(user.Email); err == nil {
+			http.Error(w, "Error: email already exists in database",
+				http.StatusBadRequest)
 			return
+		} else if err != users.ErrUserNotFound {
+			// return the internal service error if it's not the UserNotFound error << in this case not an err
+			http.Error(w, "Error:"+err.Error(), http.StatusInternalServerError)
 		}
+
 		// Ensure there isn't already a user in the UserStore with the same user name
-		if usr, err := ctx.UserStore.GetByEmail(user.UserName); usr != nil {
-			http.Error(w, "Error: user name already exists in database: "+err.Error(),
-				http.StatusInternalServerError)
+		if _, err := ctx.UserStore.GetByUserName(user.UserName); err == nil {
+			http.Error(w, "Error: user name already exists in database",
+				http.StatusBadRequest)
 			return
+		} else if err != users.ErrUserNotFound {
+			// return the internal service error if it's not the UserNotFound error << in this case not an err
+			http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		}
 
 		// Insert the new user into the UserStore
@@ -79,16 +88,6 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		encoder := json.NewEncoder(w)
 		encoder.Encode(users)
 	}
-	// If the request method is "POST":
-	//     Decode the request body into a models.NewUser struct
-	//     Validate the models.NewUser
-	//     Ensure there isn't already a user in the UserStore with the same email address
-	//     Ensure there isn't already a user in the UserStore with the same user name
-	//     Insert the new user into the UserStore
-	//     Begin a new session
-
-	// If the request method is "GET":
-
 }
 
 // SessionsHandler allows existing users to sign-in

@@ -89,11 +89,5 @@ func TestMongoStore(t *testing.T) {
 	if err := store.DeleteByID(u.ID); err != nil {
 		t.Errorf("error deleting user: %v\n", err)
 	}
-	// if u.FirstName != "UPDATED Test" {
-	// 	t.Errorf("FirstName field not updated: expected `UPDATED Test` but got `%s`\n", u.FirstName)
-	// }
-	// if u.LastName != "UPDATED Tester" {
-	// 	t.Errorf("LastName field not updated: expected `UPDATED Tester` but got `%s`\n", u.LastName)
-	// }
 
 }

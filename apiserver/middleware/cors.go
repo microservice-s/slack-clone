@@ -1,6 +1,8 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+)
 
 const (
 	//DefaultCORSOrigins are the default allowed origins
@@ -44,10 +46,6 @@ func CORS(origins, methods, allowHeaders, exposeHeaders string) Adapter {
 		//returns an http.Handler that...
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			//add the following response headers to every request:
-			// - Access-Control-Allow-Origin: value of origins param
-			// - Access-Control-Allow-Methods: value of methods param
-			// - Access-Control-Allow-Headers: value of allowHeaders param
-			// - Access-Control-Expose-Headers: value of exposeHeaders param
 			w.Header().Add(headerAccessControlAllowOrigin, origins)
 			w.Header().Add(headerAccessControlAllowMethods, methods)
 			w.Header().Add(headerAccessControlAllowHeaders, allowHeaders)
@@ -60,8 +58,10 @@ func CORS(origins, methods, allowHeaders, exposeHeaders string) Adapter {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
+
 			//else, call the ServeHTTP() method on `handler`
 			handler.ServeHTTP(w, r)
+
 		})
 	}
 }

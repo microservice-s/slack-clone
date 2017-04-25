@@ -81,15 +81,7 @@ func (nu *NewUser) ToUser() (*User, error) {
 	//that to a hex string, and appending it to their base URL:
 	//https://www.gravatar.com/avatar/ + hex-encoded md5 hash of email
 	buf := md5.Sum([]byte(nu.Email))
-	// h := md5.New()
-	// _, err := io.WriteString(h, nu.Email)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// buf := h.Sum(nil)
-	//construct a new User setting the various fields
-	//but don't assign a new ID here--do that in your
-	//concrete Store.Insert() method
+
 	user := &User{
 		Email:     nu.Email,
 		UserName:  nu.UserName,

@@ -52,6 +52,10 @@ func (ms *MongoStore) GetAll() ([]*User, error) {
 	return users, nil
 }
 
+func handleQueryError() {
+
+}
+
 //GetByID returns the User with the given ID
 func (ms *MongoStore) GetByID(id interface{}) (*User, error) {
 	// type assert that the given id is a string and convert to bson
@@ -62,7 +66,15 @@ func (ms *MongoStore) GetByID(id interface{}) (*User, error) {
 	// and store the result of the query to it
 	user := &User{}
 	err := ms.Session.DB(ms.DatabaseName).C(ms.CollectionName).FindId(id).One(user)
-	return user, err
+
+	// return the error and check if it's ErrNotFound
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user, nil
 }
 
 //GetByEmail returns the User with the given email
@@ -71,7 +83,15 @@ func (ms *MongoStore) GetByEmail(email string) (*User, error) {
 	// and store the result of the query to it
 	user := &User{}
 	err := ms.Session.DB(ms.DatabaseName).C(ms.CollectionName).Find(bson.M{"email": email}).One(user)
-	return user, err
+
+	// return the error and check if it's ErrNotFound
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user, nil
 }
 
 //GetByUserName returns the User with the given user name
@@ -80,7 +100,15 @@ func (ms *MongoStore) GetByUserName(name string) (*User, error) {
 	// and store the result of the query to it
 	user := &User{}
 	err := ms.Session.DB(ms.DatabaseName).C(ms.CollectionName).Find(bson.M{"username": name}).One(user)
-	return user, err
+
+	// return the error and check if it's ErrNotFound
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user, nil
 }
 
 //Insert inserts a new NewUser into the store
@@ -93,6 +121,9 @@ func (ms *MongoStore) Insert(newUser *NewUser) (*User, error) {
 	user.ID = bson.NewObjectId()
 	// write to the database/collection
 	err = ms.Session.DB(ms.DatabaseName).C(ms.CollectionName).Insert(user)
+	if err != nil {
+		return nil, err
+	}
 	return user, err
 }
 
