@@ -102,7 +102,7 @@ func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
 	//get the returned bytes and Unmarshal them into
 	//the `state` parameter
 	//if you get an error, return it
-	err = json.Unmarshal(jbuf, &state)
+	err = json.Unmarshal(jbuf, state)
 	if err != nil {
 		return err
 	}

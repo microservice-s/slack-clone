@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+
+	"time"
 
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
@@ -65,8 +68,13 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Begin a new session with the context session signing key and a new session state
+		state := &SessionState{
+			BeganAt:    time.Now(),
+			ClientAddr: r.RemoteAddr,
+			User:       user,
+		}
 		if _, err := sessions.BeginSession(ctx.SessionKey, ctx.SessionStore,
-			&SessionState{}, w); err != nil {
+			state, w); err != nil {
 			http.Error(w, "error beginning new session: "+err.Error(),
 				http.StatusInternalServerError)
 			return
@@ -79,6 +87,7 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		// Get all users from the UserStore and write them to the response
 		// as a JSON-encoded array
+		// TODO make sure they're authenticated!
 		users, err := ctx.UserStore.GetAll()
 		if err != nil {
 			http.Error(w, "error getting all users: "+err.Error(),
@@ -110,18 +119,21 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the user with the provided email from the UserStore; if not found, respond with an http.StatusUnauthorized
 	user, err := ctx.UserStore.GetByEmail(creds.Email)
 	if err != nil {
-		http.Error(w, "error finding provided email"+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "error authenticating user", http.StatusUnauthorized)
 		return
 	}
 	// Authenticate the user using the provided password; if that fails, respond with an http.StatusUnauthorized
 	err = user.Authenticate(creds.Password)
 	if err != nil {
-		http.Error(w, "error authenticating user"+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "error authenticating user", http.StatusUnauthorized)
+		return
 	}
 	// Begin a new session by getting the session state from previous sessions
-	state := &SessionState{}
-	sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, state)
-
+	state := &SessionState{
+		BeganAt:    time.Now(),
+		ClientAddr: r.RemoteAddr,
+		User:       user,
+	}
 	// Begin a new session with the context session signing key and the previous state
 	if _, err := sessions.BeginSession(ctx.SessionKey, ctx.SessionStore,
 		state, w); err != nil {
@@ -134,7 +146,6 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add(headerContentType, contentTypeJSONUTF8)
 	encoder := json.NewEncoder(w)
 	encoder.Encode(user)
-
 }
 
 // SessionsMineHandler allows authenticated users to sign-out
@@ -153,7 +164,8 @@ func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	// delete the session from the store
 	if err := ctx.SessionStore.Delete(sid); err != nil {
-		http.Error(w, "error deleting session"+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error deleting session"+err.Error(),
+			http.StatusInternalServerError)
 		return
 	}
 	// Respond to the client with a simple message saying that the user has been signed out
@@ -164,14 +176,19 @@ func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) 
 func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
 	// Get the session state
 	state := &SessionState{}
-	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, state)
+	// TODO check for invalid session vs internal server error!!
+	// what if they don't supply any auth header or it's invalid?
+	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
+	fmt.Println("state in handlers", state)
 	if err != nil {
-		http.Error(w, "error getting session state"+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error getting session state"+err.Error(),
+			http.StatusInternalServerError)
 		return
 	}
+
 	// Respond to the client with the session state's User field, encoded as a JSON object
 	w.Header().Add(headerContentType, contentTypeJSONUTF8)
 	encoder := json.NewEncoder(w)
-	encoder.Encode(state)
+	encoder.Encode(state.User)
 
 }
