@@ -21,14 +21,14 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		// decode the request body into a newUser struct
 		decoder := json.NewDecoder(r.Body)
-		user := &users.NewUser{}
-		if err := decoder.Decode(user); err != nil {
+		newUser := &users.NewUser{}
+		if err := decoder.Decode(newUser); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
 
 		// validate the new user
-		if err := user.Validate(); err != nil {
+		if err := newUser.Validate(); err != nil {
 			http.Error(w, "error validating user: "+err.Error(),
 				http.StatusBadRequest)
 			return
@@ -36,7 +36,7 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Ensure there isn't already a user in the UserStore with the same email address
 		// by just checking UserNotFound err, then any
-		if _, err := ctx.UserStore.GetByEmail(user.Email); err == nil {
+		if _, err := ctx.UserStore.GetByEmail(newUser.Email); err == nil {
 			http.Error(w, "Error: email already exists in database",
 				http.StatusBadRequest)
 			return
@@ -46,7 +46,7 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Ensure there isn't already a user in the UserStore with the same user name
-		if _, err := ctx.UserStore.GetByUserName(user.UserName); err == nil {
+		if _, err := ctx.UserStore.GetByUserName(newUser.UserName); err == nil {
 			http.Error(w, "Error: user name already exists in database",
 				http.StatusBadRequest)
 			return
@@ -56,7 +56,9 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Insert the new user into the UserStore
-		if _, err := ctx.UserStore.Insert(user); err != nil {
+		var user *users.User
+		var err error
+		if user, err = ctx.UserStore.Insert(newUser); err != nil {
 			http.Error(w, "error inserting new user: "+err.Error(),
 				http.StatusInternalServerError)
 			return

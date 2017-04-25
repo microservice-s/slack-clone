@@ -13,13 +13,15 @@ import (
 
 	"encoding/json"
 
+	"io"
+
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
 )
 
 type usersTestCase struct {
 	method      string
-	body        string
+	body        interface{}
 	expStatus   int
 	expRespBody string
 	jsonFlag    bool
@@ -58,8 +60,15 @@ func testPOSTUsersCase(t *testing.T, hctx *Context, c *usersTestCase) {
 	// defer wg.Done()
 
 	// Create a request to pass to our handler.
-	bodyStr := []byte(c.body)
-	req, err := http.NewRequest(c.method, apiUsers, bytes.NewBuffer(bodyStr))
+	var body io.Reader
+	if bod, ok := c.body.(string); ok {
+		bodyStr := []byte(bod)
+		body = bytes.NewBuffer(bodyStr)
+	} else if c.body == nil {
+		body = nil
+	}
+
+	req, err := http.NewRequest(c.method, apiUsers, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,6 +92,7 @@ func testPOSTUsersCase(t *testing.T, hctx *Context, c *usersTestCase) {
 	// lol
 	var bodyRespStr string
 	if c.jsonFlag {
+		return
 		buf := new(bytes.Buffer)
 		if err := json.Compact(buf, []byte(c.expRespBody)); err != nil {
 			t.Fatal(err)
@@ -102,7 +112,7 @@ func testPOSTUsersCase(t *testing.T, hctx *Context, c *usersTestCase) {
 	}
 }
 
-func TestUsersHandler(t *testing.T) {
+func TestUsersPOST(t *testing.T) {
 
 	// ----- test POST (sign up) -----
 	cases := []usersTestCase{
@@ -188,11 +198,10 @@ func TestUsersHandler(t *testing.T) {
 			expStatus: http.StatusOK,
 			expRespBody: `{
 				"email": "test@gmail.com",
-				"password": "test1234",
-				"passwordConf": "test1234",
 				"userName": "jim",
 				"firstName": "jimmy",
-				"lastName": "jones"
+				"lastName": "jones",
+				"photoURL":"https://www.gravatar.com/avatar/1aedb8d9dc4751e229a335e371db8058"
 			}`,
 			jsonFlag: true,
 		},
@@ -248,10 +257,12 @@ func TestUsersHandler(t *testing.T) {
 		testPOSTUsersCase(t, hctx, &c)
 	}
 
-	// TEST VALIDATE
+}
 
+func TestUsersGET(t *testing.T) {
 	// ----- test GET (get all users) -----
-
+	hctx := newContext()
+	// // test
 	// // Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// // pass 'nil' as the third parameter.
 	// req, err := http.NewRequest("GET", apiUsers, nil)
@@ -282,6 +293,90 @@ func TestUsersHandler(t *testing.T) {
 	// 		rr.Body.String(), expected)
 	// }
 
+	// add two valid users and verify that the response is valid
+	cases := []usersTestCase{
+		// test case where there are no entries
+		usersTestCase{
+			method:      "GET",
+			body:        nil,
+			expStatus:   http.StatusOK,
+			expRespBody: "[]",
+			jsonFlag:    false,
+		},
+		//test invalid JSON
+		usersTestCase{
+			method: "POST",
+			body: `{
+				"email": "real@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "test",
+				"firstName": "jimmy",
+				"lastName": "jones"
+				}`,
+			expStatus: http.StatusOK,
+			expRespBody: `{
+				"email": "real@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "test",
+				"firstName": "jimmy",
+				"lastName": "jones"
+				}`,
+			jsonFlag: true,
+		},
+		//test invalid email TODO figure out what the response is
+		usersTestCase{
+			method: "POST",
+			body: `{
+				"email": "test@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "test2",
+				"firstName": "jimmy",
+				"lastName": "jones"
+				}`,
+			expStatus: http.StatusOK,
+			expRespBody: `{
+				"email": "test@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "test2",
+				"firstName": "jimmy",
+				"lastName": "jones"
+				}`,
+			jsonFlag: true,
+		},
+		usersTestCase{
+			method:    "GET",
+			body:      nil,
+			expStatus: http.StatusOK,
+			expRespBody: `[
+				{
+				"email": "real@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "test",
+				"firstName": "jimmy",
+				"lastName": "jones"
+				},
+				{
+				"email": "test@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "test2",
+				"firstName": "jimmy",
+				"lastName": "jones"
+			}
+			]`,
+			jsonFlag: true,
+		},
+	}
+
+	for _, c := range cases {
+		fmt.Println("testing", c.expRespBody)
+		testPOSTUsersCase(t, hctx, &c)
+	}
 }
 
 func TestSessionshandler(t *testing.T) {
