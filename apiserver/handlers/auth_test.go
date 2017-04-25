@@ -149,7 +149,7 @@ func TestUsersPOST(t *testing.T) {
 			expRespBody: "invalid JSON",
 			jsonFlag:    false,
 		},
-		//test invalid email TODO figure out what the response is
+		// TODO: test invalid email figure out what the response is
 		testCase{
 			method:  "POST",
 			handler: hctx.UsersHandler,
@@ -550,7 +550,8 @@ func TestSessionsHeaders(t *testing.T) {
 			expStatus:   http.StatusBadRequest,
 			expRespBody: "error getting sessionID: Invalid Session ID",
 			jsonFlag:    false,
-			session:     "Bearer -XYjBDq80Fiq3NpvmBFY8uv-8h8Mc_dWtSJRyauCH77wZHez2WSKEkNVA1KiJIvL5dfegNlntfQcE_Pj5fYsaA==",
+			// this was a previously generated bearer token
+			session: "Bearer d2l6FFNU7aiZrF60gdvsQNetRkf9SjYoJdW5ll1qlILZ3eiW24DR6v46tsvx99cWsINNg1b6dYRmdQACwMMZbw==",
 		},
 	}
 	for _, c := range cases {

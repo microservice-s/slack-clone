@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -87,14 +86,14 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		// Get all users from the UserStore and write them to the response
 		// as a JSON-encoded array
-		// TODO make sure they're authenticated!
+		// TODO: make sure they're authenticated!
 		users, err := ctx.UserStore.GetAll()
 		if err != nil {
 			http.Error(w, "error getting all users: "+err.Error(),
 				http.StatusInternalServerError)
 			return
 		}
-		// TODO write a respond function to the user
+		// TODO: write a respond function to the user
 		w.Header().Add(headerContentType, contentTypeJSONUTF8)
 		encoder := json.NewEncoder(w)
 		encoder.Encode(users)
@@ -176,10 +175,9 @@ func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) 
 func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
 	// Get the session state
 	state := &SessionState{}
-	// TODO check for invalid session vs internal server error!!
+	// TODO: check for invalid session vs internal server error!!
 	// what if they don't supply any auth header or it's invalid?
 	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
-	fmt.Println("state in handlers", state)
 	if err != nil {
 		http.Error(w, "error getting session state"+err.Error(),
 			http.StatusInternalServerError)

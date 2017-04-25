@@ -105,9 +105,7 @@ Loop:
 				if rel == "icon" || rel == "shortcut icon" {
 					url, _ := url.Parse(href)
 					if !url.IsAbs() && !strings.HasPrefix(url.String(), "//www") {
-						fmt.Println(url.String())
 						urlSt := path.Join(URL, url.String())
-						fmt.Printf(urlSt)
 						props["image"] = urlSt
 						// handle the case that the url just starts with www
 					} else if strings.HasPrefix(url.String(), "//www") {
