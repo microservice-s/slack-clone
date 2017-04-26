@@ -176,6 +176,7 @@ func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
 	// Get the session state
 	state := &SessionState{}
 
+	// get the state of the browser that is accessing their page
 	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
 	if err != nil {
 		http.Error(w, "error getting session state"+err.Error(),

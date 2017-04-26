@@ -93,17 +93,12 @@ func main() {
 
 	// EXTRA CREDIT password reset functionality
 	resetStore := passwordreset.NewRedisResetStore(reddisClient, -1)
-	if err != nil {
-		log.Fatalf("error creating passwordreset store: %v", err)
-	}
 
 	// get the email password from EMAILPASS
 	emailPass := os.Getenv("EMAILPASS")
 	if len(emailPass) == 0 {
 		log.Fatal("no EMAILPASS env variable set")
 	}
-
-	resetStore := passwordreset.NewRedisResetStore(reddisClient, -1)
 
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.

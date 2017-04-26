@@ -90,7 +90,7 @@ func (mus *MemStore) Update(updates *UserUpdates, currentuser *User) error {
 }
 
 // ResetPassword applies password resets to the user with the given email
-func ResetPassword(email, newPassword string) error {
+func (mus *MemStore) ResetPassword(email, newPassword string) error {
 	return nil
 }
 
