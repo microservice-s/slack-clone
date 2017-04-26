@@ -102,6 +102,9 @@ func main() {
 	if len(emailPass) == 0 {
 		log.Fatal("no EMAILPASS env variable set")
 	}
+
+	resetStore := passwordreset.NewRedisResetStore(reddisClient, -1)
+
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
