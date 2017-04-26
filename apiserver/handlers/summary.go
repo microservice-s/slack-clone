@@ -126,7 +126,6 @@ Loop:
 			// then check the header type of the response body to make sure it's an image
 			ctype := res.Header.Get("Content-Type")
 			if strings.HasPrefix(ctype, "image") {
-				fmt.Println(ctype)
 				props["image"] = favicon
 			}
 		}

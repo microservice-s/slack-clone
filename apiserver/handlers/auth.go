@@ -175,8 +175,7 @@ func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) 
 func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
 	// Get the session state
 	state := &SessionState{}
-	// TODO: check for invalid session vs internal server error!!
-	// what if they don't supply any auth header or it's invalid?
+
 	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
 	if err != nil {
 		http.Error(w, "error getting session state"+err.Error(),

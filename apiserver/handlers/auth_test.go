@@ -60,8 +60,6 @@ func newMongoContext() *Context {
 }
 
 func testCaseFunc(t *testing.T, c *testCase) {
-	//fmt.Printf("Testing: %v\n", c.expRespBody)
-	// defer wg.Done()
 
 	// Create a request to pass to our handler.
 	var body io.Reader
@@ -124,11 +122,7 @@ func testCaseFunc(t *testing.T, c *testCase) {
 		bodyRespStr = c.expRespBody + "\n"
 	}
 
-	// expBodyBytes := []byte(c.expRespBody)
-	// expBodyStr := string(expBodyBytes)
 	if rr.Body.String() != bodyRespStr {
-		// fmt.Printf("exp: %v, %v\n", []byte(c.expRespBody), len(c.expRespBody))
-		// fmt.Printf("got: %v, %v\n", []byte(rr.Body.String()), len(rr.Body.String()))
 		t.Errorf("handler returned unexpected body: \ngot %v \nwant %v",
 			rr.Body.String(), bodyRespStr)
 	}
@@ -295,7 +289,6 @@ func TestUsersPOST(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		//fmt.Println("testing", c.expRespBody)
 		testCaseFunc(t, &c)
 	}
 
@@ -395,7 +388,6 @@ func TestUsersGET(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		//fmt.Println("testing", c.expRespBody)
 		testCaseFunc(t, &c)
 	}
 }

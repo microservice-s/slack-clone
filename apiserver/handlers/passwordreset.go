@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/smtp"
 
@@ -22,10 +21,9 @@ type UpdatePassword struct {
 	PasswordConf string                   `json:"passwordConf"`
 }
 
-func send(body string, to string) error {
-	fmt.Printf("body: %v, to: %v", body, to)
+// send is a helper that sends emails from resetburner8080@gmail.com
+func send(body, to, password string) error {
 	from := "resetburner8080@gmail.com"
-	password := "Contact1"
 
 	msg := "From: " + from + "\r\n" +
 		"To: " + to + "\r\n" +
@@ -39,7 +37,7 @@ func send(body string, to string) error {
 	return nil
 }
 
-// gmail: resetburner8080@gmail.com
+// ResetCodesHandler handles sending and storing reset tokens for users to reset their passwords
 func (ctx *Context) ResetCodesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// The request method must be "POST"
@@ -79,7 +77,7 @@ func (ctx *Context) ResetCodesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// send the reset email to the user
-	send(string(token), email.Email)
+	send(string(token), email.Email, ctx.EmailPass)
 
 }
 
@@ -87,14 +85,7 @@ func (ctx *Context) ResetCodesHandler(w http.ResponseWriter, r *http.Request) {
 // accepts a JSON-encoded object containing the one-time use reset
 // code obtained from the previous API, a new password, and a confirmation of that new password.
 func (ctx *Context) PasswordResethandler(w http.ResponseWriter, r *http.Request) {
-	//     PUT /v1/passwords/email-address: accepts a JSON-encoded object containing the one-time use reset
-	//code obtained from the previous API, a new password, and a confirmation of that new password.
-	//If the reset code is valid, and if the new password and password conifrmation fields match,
-	//use the email-address from the URL to find the user account in the database and reset its password.
-	//Respond with a simple confirmation message. It's up to you if you want to automatically start a new
-	//authenticated session after a successful password reset: some systems do that, but others make the user
-	//explicitly sign-in using the new password, just to reinfroce it.
-	// The request method must be "PUT"
+	// Only accept request with PUT
 	if r.Method != "PUT" {
 		http.Error(w, "request method must be PUT", http.StatusMethodNotAllowed)
 		return
@@ -102,7 +93,7 @@ func (ctx *Context) PasswordResethandler(w http.ResponseWriter, r *http.Request)
 
 	//decode the request body into an UpdatePassword struct
 	decoder := json.NewDecoder(r.Body)
-	reset := UpdatePassword{}
+	reset := &UpdatePassword{}
 	if err := decoder.Decode(reset); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return

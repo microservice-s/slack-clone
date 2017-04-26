@@ -91,8 +91,17 @@ func main() {
 		log.Fatalf("error creating user store: %v", err)
 	}
 
+	// EXTRA CREDIT password reset functionality
 	resetStore := passwordreset.NewRedisResetStore(reddisClient, -1)
+	if err != nil {
+		log.Fatalf("error creating passwordreset store: %v", err)
+	}
 
+	// get the email password from EMAILPASS
+	emailPass := os.Getenv("EMAILPASS")
+	if len(emailPass) == 0 {
+		log.Fatal("no EMAILPASS env variable set")
+	}
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
@@ -100,6 +109,7 @@ func main() {
 		SessionStore: sesStore,
 		UserStore:    userStore,
 		ResetStore:   resetStore,
+		EmailPass:    emailPass,
 	}
 
 	// Create a new mux handlers to it
@@ -112,15 +122,14 @@ func main() {
 	// EXTRA CREDIT reset handler
 	mux.HandleFunc(apiReset, hctx.ResetCodesHandler)
 	mux.HandleFunc(apiPasswords, hctx.PasswordResethandler)
-	//mux.HandleFunc()
+
 	//add your handlers.SummaryHandler function as a handler
 	//for the apiSummary route
-	//HINT: https://golang.org/pkg/net/http/#HandleFunc
 	mux.HandleFunc(apiSummary, handlers.SummaryHandler)
 
 	// create a new logger to wrap all the handlers with
 	// open a file
-	f, err := os.OpenFile("testlogs.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	f, err := os.OpenFile("logs/logs.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Printf("error opening file: %v", err)
 	}

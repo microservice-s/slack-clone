@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 )
 
 //InvalidSessionID represents an empty, invalid session ID
@@ -51,7 +50,6 @@ func NewSessionID(signingKey string) (SessionID, error) {
 	//byte slice into a base64.URLEncoding
 	//and return the result as a new SessionID
 	sid := SessionID(base64.URLEncoding.EncodeToString(buf))
-	fmt.Println(sid)
 	return sid, nil
 }
 
