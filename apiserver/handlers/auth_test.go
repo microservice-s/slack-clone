@@ -32,7 +32,7 @@ type testCase struct {
 }
 
 // create the handlers context for the tests
-func newContext() *Context {
+func NewContext() *Context {
 	return &Context{
 		SessionKey:   "supersecret",
 		SessionStore: sessions.NewMemStore(-1),
@@ -136,7 +136,7 @@ func testCaseFunc(t *testing.T, c *testCase) {
 }
 
 func TestUsersPOST(t *testing.T) {
-	hctx := newContext()
+	hctx := NewContext()
 	// ----- test POST (sign up) -----
 	cases := []testCase{
 		//test invalid JSON
@@ -303,7 +303,7 @@ func TestUsersPOST(t *testing.T) {
 
 func TestUsersGET(t *testing.T) {
 	// ----- test GET (get all users) -----
-	hctx := newContext()
+	hctx := NewContext()
 
 	// add two valid users and verify that the response is valid
 	cases := []testCase{
@@ -401,7 +401,7 @@ func TestUsersGET(t *testing.T) {
 }
 
 func TestSessionshandler(t *testing.T) {
-	hctx := newContext()
+	hctx := NewContext()
 	cases := []testCase{
 		// test NOT POST case
 		testCase{
@@ -490,7 +490,7 @@ func TestSessionshandler(t *testing.T) {
 }
 
 func TestSessionsHeaders(t *testing.T) {
-	hctx := newContext()
+	hctx := NewContext()
 	cases := []testCase{
 		// test NOT DELETE case
 		testCase{
@@ -560,7 +560,7 @@ func TestSessionsHeaders(t *testing.T) {
 }
 
 func TestSessionsMine(t *testing.T) {
-	hctx := newContext()
+	hctx := NewContext()
 
 	handler := http.HandlerFunc(hctx.UsersHandler)
 	rr := httptest.NewRecorder()
@@ -618,7 +618,7 @@ func TestSessionsMine(t *testing.T) {
 }
 
 func TestUsersMe(t *testing.T) {
-	hctx := newContext()
+	hctx := NewContext()
 
 	handler := http.HandlerFunc(hctx.UsersHandler)
 	rr := httptest.NewRecorder()

@@ -137,6 +137,28 @@ func (ms *MongoStore) Update(updates *UserUpdates, currentuser *User) error {
 	return col.UpdateId(currentuser.ID, bUpdates)
 }
 
+// ResetPassword set's the password of the user with the specified email returns error if not successful
+func (ms *MongoStore) ResetPassword(email, newPassword string) error {
+	// get the user and error if they aren't in the db
+	user, err := ms.GetByEmail(email)
+	if err != nil {
+		return err
+	}
+
+	// set the password of the user
+	if err := user.SetPassword(newPassword); err != nil {
+		return err
+	}
+
+	if sID, ok := user.ID.(string); ok {
+		user.ID = bson.ObjectIdHex(sID)
+	}
+
+	col := ms.Session.DB(ms.DatabaseName).C(ms.CollectionName)
+
+	return col.UpdateId(user.ID, user)
+}
+
 // DeleteByID deletes a user from the db by id
 func (ms *MongoStore) DeleteByID(id interface{}) error {
 	// type assert that the given id is a string and convert to bson

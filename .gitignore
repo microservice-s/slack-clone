@@ -5,3 +5,4 @@ node_modules
 apiserver/apiserver
 tls/
 apiserver/sessions/.gitignore
+*.log
