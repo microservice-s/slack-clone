@@ -121,13 +121,16 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error authenticating user", http.StatusUnauthorized)
 		return
 	}
+
+	// TODO: implement sign in attempts ec here
+
 	// Authenticate the user using the provided password; if that fails, respond with an http.StatusUnauthorized
 	err = user.Authenticate(creds.Password)
 	if err != nil {
 		http.Error(w, "error authenticating user", http.StatusUnauthorized)
 		return
 	}
-	// Begin a new session by getting the session state from previous sessions
+	// Begin a new session by getting the session state
 	state := &SessionState{
 		BeganAt:    time.Now(),
 		ClientAddr: r.RemoteAddr,
