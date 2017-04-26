@@ -11,8 +11,6 @@ import (
 
 	mgo "gopkg.in/mgo.v2"
 
-	"encoding/json"
-
 	"io"
 
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
@@ -113,11 +111,11 @@ func testCaseFunc(t *testing.T, c *testCase) {
 	var bodyRespStr string
 	if c.jsonFlag {
 		return
-		buf := new(bytes.Buffer)
-		if err := json.Compact(buf, []byte(c.expRespBody)); err != nil {
-			t.Fatal(err)
-		}
-		bodyRespStr = buf.String() + "\n"
+		// buf := new(bytes.Buffer)
+		// if err := json.Compact(buf, []byte(c.expRespBody)); err != nil {
+		// 	t.Fatal(err)
+		// }
+		// bodyRespStr = buf.String() + "\n"
 	} else {
 		bodyRespStr = c.expRespBody + "\n"
 	}
@@ -143,7 +141,6 @@ func TestUsersPOST(t *testing.T) {
 			expRespBody: "invalid JSON",
 			jsonFlag:    false,
 		},
-		// TODO: test invalid email figure out what the response is
 		testCase{
 			method:  "POST",
 			handler: hctx.UsersHandler,

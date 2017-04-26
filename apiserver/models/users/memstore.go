@@ -89,6 +89,11 @@ func (mus *MemStore) Update(updates *UserUpdates, currentuser *User) error {
 	return nil
 }
 
+// ResetPassword applies password resets to the user with the given email
+func ResetPassword(email, newPassword string) error {
+	return nil
+}
+
 func (mus *MemStore) newID() (UserID, error) {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); nil != err {
