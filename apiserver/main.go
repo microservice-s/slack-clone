@@ -125,8 +125,16 @@ func main() {
 
 	// create a new logger to wrap all the handlers with
 	// open a file
-	f, err := os.OpenFile("logs.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
+	logFile := "logs.log"
+	var f *os.File
+	var ferr error
+	if _, err := os.Stat(logFile); os.IsNotExist(err) {
+		f, ferr = os.Create(logFile)
+	} else {
+		f, ferr = os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	}
+
+	if ferr != nil {
 		fmt.Printf("error opening file: %v", err)
 	}
 	// don't forget to close it
