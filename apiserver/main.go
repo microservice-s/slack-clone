@@ -52,9 +52,7 @@ func main() {
 	//and the Let's Encrypt cert/key in production
 	tlsKeyPath := os.Getenv("TLSKEY")
 	tlsCertPath := os.Getenv("TLSCERT")
-	if len(tlsCertPath) == 0 || len(tlsCertPath) == 0 {
-		log.Fatal("one of the TLS env variable not set")
-	}
+
 	// 	Read the following new environment variables:
 
 	// read and use the following environment variables
