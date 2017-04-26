@@ -178,12 +178,6 @@ func getPageSummary(url string) (openGraphProps, error) {
 //to the client as a JSON-encoded object.
 func SummaryHandler(w http.ResponseWriter, r *http.Request) {
 
-	//Add the following header to the response
-	//   Access-Control-Allow-Origin: *
-	//this will allow JavaScript served from other origins
-	//to call this API
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-
 	//get the `url` query string parameter
 	//if you use r.FormValue() it will also handle cases where
 	//the client did POST with `url` as a form field
