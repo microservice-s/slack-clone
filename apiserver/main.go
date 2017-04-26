@@ -125,7 +125,7 @@ func main() {
 
 	// create a new logger to wrap all the handlers with
 	// open a file
-	f, err := os.OpenFile("logs/logs.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	f, err := os.OpenFile("logs.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Printf("error opening file: %v", err)
 	}
