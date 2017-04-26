@@ -12,6 +12,7 @@ import (
 	"github.com/aethanol/challenges-aethanol/apiserver/handlers"
 	"github.com/aethanol/challenges-aethanol/apiserver/middleware"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
+	"github.com/aethanol/challenges-aethanol/apiserver/passwordreset"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
 )
 
@@ -28,6 +29,8 @@ const (
 	apiSessions     = apiRoot + "sessions"
 	apiSessionsMine = apiSessions + "/mine"
 	apiUsersMe      = apiUsers + "/me"
+	apiReset        = apiRoot + "resetcodes"
+	apiPasswords    = apiRoot + "passwords/"
 )
 
 //main is the main entry point for this program
@@ -88,12 +91,15 @@ func main() {
 		log.Fatalf("error creating user store: %v", err)
 	}
 
+	resetStore := passwordreset.NewRedisResetStore(reddisClient, -1)
+
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
 		SessionKey:   sessionKey,
 		SessionStore: sesStore,
 		UserStore:    userStore,
+		ResetStore:   resetStore,
 	}
 
 	// Create a new mux handlers to it
@@ -102,14 +108,30 @@ func main() {
 	mux.HandleFunc(apiSessions, hctx.SessionsHandler)
 	mux.HandleFunc(apiSessionsMine, hctx.SessionsMineHandler)
 	mux.HandleFunc(apiUsersMe, hctx.UsersMeHanlder)
+
+	// EXTRA CREDIT reset handler
+	mux.HandleFunc(apiReset, hctx.ResetCodesHandler)
+	mux.HandleFunc(apiPasswords, hctx.PasswordResethandler)
+	//mux.HandleFunc()
 	//add your handlers.SummaryHandler function as a handler
 	//for the apiSummary route
 	//HINT: https://golang.org/pkg/net/http/#HandleFunc
 	mux.HandleFunc(apiSummary, handlers.SummaryHandler)
 
+	// create a new logger to wrap all the handlers with
+	// open a file
+	f, err := os.OpenFile("testlogs.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Printf("error opening file: %v", err)
+	}
+	// don't forget to close it
+	defer f.Close()
+
+	logger := log.New(f, "", log.LstdFlags)
+
 	// apiRoot as the path, and the result of calling Adapt() on your new mux.
 	// Specify the middleware.CORS() adapter as the only adapter
-	http.Handle(apiRoot, middleware.Adapt(mux, middleware.CORS("", "", "", "")))
+	http.Handle(apiRoot, middleware.Adapt(mux, middleware.CORS("", "", "", ""), middleware.Logs(logger)))
 
 	//start your web server and use log.Fatal() to log
 	//any errors that occur if the server can't start

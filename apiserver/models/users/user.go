@@ -58,19 +58,29 @@ func (nu *NewUser) Validate() error {
 	if err != nil {
 		return err
 	}
-	//ensure Password is at least 6 chars
-	if len(nu.Password) < 6 {
-		return errors.New("Error: password less than 6 chars")
+	// validate the password
+	if err := ValidatePassword(nu.Password, nu.PasswordConf); err != nil {
+		return err
 	}
-	//ensure Password and PasswordConf match
-	if nu.Password != nu.PasswordConf {
-		return errors.New("Error: password and passwordConf don't match")
-	}
+
 	//ensure UserName has non-zero length
 	if len(nu.UserName) == 0 {
 		return errors.New("Error: username is zero length")
 	}
 	//if you made here, it's valid, so return nil
+	return nil
+}
+
+// ValidatePassword ensures that a password is valid
+func ValidatePassword(password, passwordConf string) error {
+	// ensure password is at least 6 chars
+	if len(password) < 6 {
+		return errors.New("Error: password less than 6 chars")
+	}
+	// ensure password and conf match
+	if password != passwordConf {
+		return errors.New("Error: password and passwordConf don't match")
+	}
 	return nil
 }
 

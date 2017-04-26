@@ -28,4 +28,7 @@ type Store interface {
 
 	//Update applies UserUpdates to the currentUser
 	Update(updates *UserUpdates, currentuser *User) error
+
+	// ResetPassword applies password resets to the user with the given email
+	ResetPassword(email, newPassword string) error
 }
