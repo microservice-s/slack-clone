@@ -1,4 +1,5 @@
 <template>
+  <transition name="fade">
     <div class="profile">
         <router-link to="/signout">Sign Out</router-link>
         <div>{{user.userName}}</div>
@@ -6,6 +7,8 @@
         <div>{{user.lastName}}</div>
         <div>{{user.email}}</div>
     </div>
+  </transition>
+    
 </template>
 
 <script>

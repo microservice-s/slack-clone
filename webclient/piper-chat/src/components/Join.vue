@@ -1,7 +1,7 @@
 <template>
     <div class="join">
          <img src="../assets/logo.png">
-        <h1>Join Twat</h1>
+        <h1>Join Piper Chat</h1>
          <div v-if="error" class="error">{{errorMessage}}</div>
         <form v-on:submit.prevent="join">
             <input v-model="user.email" type="text" name="email" placeholder="email"><br/>
