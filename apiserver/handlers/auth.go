@@ -237,18 +237,6 @@ func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// TESTCODE
-		// Get the session state
-		state1 := &SessionState{}
-
-		// get the state of the browser that is accessing their page
-		_, err1 := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state1)
-		if err1 != nil {
-			fmt.Println(err1)
-		}
-		fmt.Println(state1.User)
-		// TESTCODE
-
 		// Respond to the client with a simple message saying that the user has been updated
 		io.WriteString(w, "user updated\n")
 	}
