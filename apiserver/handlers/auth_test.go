@@ -657,3 +657,73 @@ func TestUsersMe(t *testing.T) {
 	}
 
 }
+
+func TestUsersMeUpdate(t *testing.T) {
+	hctx := NewContext()
+
+	handler := http.HandlerFunc(hctx.UsersHandler)
+	rr := httptest.NewRecorder()
+	// add a new user to the userstore and get the auth token
+	body := `{
+				"email": "test@gmail.com",
+				"password": "test1234",
+				"passwordConf": "test1234",
+				"userName": "jim",
+				"firstName": "jimmy",
+				"lastName": "jones"
+			}`
+
+	bodyStr := []byte(body)
+	req, err := http.NewRequest("POST", apiUsers, bytes.NewBuffer(bodyStr))
+	if nil != err {
+		t.Fatal(err)
+	}
+
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+	// get the sessionID from the header
+	auth := rr.Header().Get("Authorization")
+
+	// now check if we can update the user
+	// then check to see if we can access the /me
+	handler = http.HandlerFunc(hctx.UsersMeHanlder)
+	rr = httptest.NewRecorder()
+	body1 := `{
+				"firstName": "sexy-steve",
+				"lastName": "tanimoto"
+			}`
+
+	bodyStr1 := []byte(body1)
+
+	req, err = http.NewRequest("PATCH", apiUsersMe, bytes.NewBuffer(bodyStr1))
+	if nil != err {
+		t.Fatal(err)
+	}
+	// add the auth to the header
+	req.Header.Add("Authorization", auth)
+
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// check if the user was updated properly
+	req, err = http.NewRequest("GET", apiUsersMe, nil)
+	if nil != err {
+		t.Fatal(err)
+	}
+	// add the auth to the header
+	req.Header.Add("Authorization", auth)
+
+	handler.ServeHTTP(rr, req)
+
+	fmt.Println(rr.Body.String())
+}

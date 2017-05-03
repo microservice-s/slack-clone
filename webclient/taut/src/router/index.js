@@ -11,9 +11,20 @@ import Profile from '@/components/Profile'
 import Chat from '@/components/Chat'
 
 function requireAuth (to, from, next) {
-  if (!auth.loggedIn()) {
+  if (!auth.signedIn()) {
     next({
       path: '/'// ,
+      // query: { redirect: to.fullPath }
+    })
+  } else {
+    next()
+  }
+}
+
+function authed (to, from, next) {
+  if (auth.signedIn()) {
+    next({
+      path: '/profile'// ,
       // query: { redirect: to.fullPath }
     })
   } else {
@@ -26,12 +37,14 @@ export default new Router({
     {
       path: '/',
       name: 'Signin',
-      component: Signin
+      component: Signin,
+      beforeEnter: authed
     },
     {
       path: '/join',
       name: 'Join',
-      component: Join
+      component: Join,
+      beforeEnter: authed
     },
     {
       path: '/test',
@@ -49,6 +62,12 @@ export default new Router({
       name: 'Chat',
       component: Chat,
       beforeEnter: requireAuth
+    },
+    { path: '/signout',
+      beforeEnter (to, from, next) {
+        auth.signOut()
+        next('/')
+      }
     }
   ]
 })

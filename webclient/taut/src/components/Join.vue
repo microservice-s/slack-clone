@@ -1,6 +1,8 @@
 <template>
     <div class="join">
+         <img src="../assets/logo.png">
         <h1>Join Twat</h1>
+         <div v-if="error" class="error">{{errorMessage}}</div>
         <form v-on:submit.prevent="join">
             <input v-model="user.email" type="text" name="email" placeholder="email"><br/>
             <input v-model="user.userName" type="text" name="userName" placeholder="username"><br/>
@@ -14,7 +16,7 @@
 </template>
 
 <script>
-    import FetchMixin from './mixins'
+    import auth from '../services/auth'
     export default {
       name: 'join',
       data () {
@@ -26,10 +28,11 @@
             lastName: '',
             password: '',
             passwordConf: ''
-          }
+          },
+          error: false,
+          errorMessage: ''
         }
       },
-      mixins: [FetchMixin],
       methods: {
         join: function () {
           var user = {
@@ -40,7 +43,15 @@
             password: this.user.password,
             passwordConf: this.user.passwordConf
           }
-          this.fetchHandler('POST', 'users', user)
+          auth.join(user, joined => {
+            if (!joined) {
+              this.error = true
+            } else {
+              this.$router.replace(this.$route.query.redirect || '/profile')
+            }
+          }).then(data => {
+            this.errorMessage = data
+          })
         }
       }
     }
