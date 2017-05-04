@@ -25,7 +25,7 @@ export default {
   color: red;
 }
 .fade-enter-active, .fade-leave-active {
-  transition: opacity .5s
+  transition: opacity .1s
 }
 .fade-leave-active {
   opacity: 0

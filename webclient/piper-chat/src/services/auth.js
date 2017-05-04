@@ -1,4 +1,3 @@
-// import { ajax } from 'ajax'
 import axios from 'axios'
 
 export default {

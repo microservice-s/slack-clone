@@ -34,7 +34,6 @@
               this.$router.replace(this.$route.query.redirect || '/profile')
             }
           })
-          // this.fetchHandler('POST', 'sessions', user)
         }
       }
     }

@@ -9,6 +9,7 @@ import Join from '@/components/Join'
 import Test from '@/components/Test'
 import Profile from '@/components/Profile'
 import Chat from '@/components/Chat'
+import NotFound from '@/components/NotFound'
 
 function requireAuth (to, from, next) {
   if (!auth.signedIn()) {
@@ -33,7 +34,9 @@ function authed (to, from, next) {
 }
 
 export default new Router({
+  mode: 'history',
   routes: [
+    { path: '*', component: NotFound },
     {
       path: '/',
       name: 'Signin',

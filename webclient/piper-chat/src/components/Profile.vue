@@ -1,11 +1,14 @@
 <template>
   <transition name="fade">
     <div class="profile">
-        <router-link to="/signout">Sign Out</router-link>
+        <div v-if="error">Error loading user</div>
+        <img :src="user.photoURL" alt="profile picture">
         <div>{{user.userName}}</div>
-        <div>{{user.firstName}}</div>
-        <div>{{user.lastName}}</div>
+        <input v-model="user.firstName"></input> <br>
+        <input v-model="user.lastName"></input> <br>
+        <input v-on:click.prevent="save" type="submit" value="save">
         <div>{{user.email}}</div>
+        <router-link to="/signout">Sign Out</router-link>
     </div>
   </transition>
     
@@ -19,7 +22,7 @@
         return {
           loading: false,
           error: false,
-          user: null
+          user: ''
         }
       },
       created: function () {
@@ -33,9 +36,27 @@
             this.error = true
           }
         }).then(data => {
-          console.log(data)
           this.user = data
         })
+      },
+      methods: {
+        save: function () {
+          var init = {method: 'PATCH',
+            baseURL: 'https://api.aethanol.me/v1/',
+            url: 'users/me',
+            headers: {'Authorization': localStorage.authorization},
+            data: {
+              firstName: this.user.firstName,
+              lastName: this.user.lastName
+            }
+          }
+          ajax.apiRequest(init, err => {
+            if (err) {
+              this.error = true
+            }
+          }).then(data => {
+          })
+        }
       }
     }
 </script>
