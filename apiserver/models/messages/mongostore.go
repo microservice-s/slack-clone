@@ -130,8 +130,12 @@ func (ms *MongoStore) InsertChannel(newChannel *NewChannel, creator *users.User)
 	// create a new objectID for the _id
 	channel.ID = bson.NewObjectId()
 	// insert the chanenl to the database/collection if the channel name doesn't exist
+	// it has a unique index!!
 	err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).Insert(channel)
 	if err != nil {
+		if mgo.IsDup(err) {
+			return nil, ErrDuplicateKey
+		}
 		return nil, err
 	}
 
@@ -214,8 +218,10 @@ func (ms *MongoStore) GetRecentMessages(channel *Channel, user *users.User, N in
 		channel.ID = bson.ObjectIdHex(sID)
 	}
 	messages := []*Message{}
-	// query mongo for the messages for the given channel
-	err := ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).Find(bson.M{"channelid": channel.ID}).Sort("-createdat").Limit(N).All(&messages)
+	// query mongo for the messages for the given channel and where the user is a member
+	col := ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection)
+	query := col.Find(bson.M{"$and": []bson.M{bson.M{"channelid": channel.ID}, bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}}})
+	err := query.Sort("-createdat").Limit(N).All(&messages)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, ErrMessageNotFound

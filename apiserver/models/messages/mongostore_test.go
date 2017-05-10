@@ -64,11 +64,11 @@ func TestMongoStoreInsertChannel(t *testing.T) {
 	}
 
 	// add a channel
-	c, err := addChannel(messageStore, u, "updateChan")
+	_, err = addChannel(messageStore, u, "updateChan")
 	if err != nil {
 		t.Errorf("error adding new channel: %v", err.Error())
 	}
-	c, err = addChannel(messageStore, u, "updateChan")
+	_, err = addChannel(messageStore, u, "updateChan")
 	if err != nil {
 		t.Errorf("error adding new channel: %v", err.Error())
 	}
@@ -170,7 +170,7 @@ func TestMongoStoreDeleteChannel(t *testing.T) {
 	}
 
 	// make sure that all the messages were deleted
-	mes, err := messageStore.GetRecentMessages(channel, 10)
+	mes, err := messageStore.GetRecentMessages(channel, u, 10)
 	if len(mes) != 0 {
 		t.Error("all messages NOT deleted")
 	}

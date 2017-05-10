@@ -12,6 +12,9 @@ var ErrMessageNotFound = errors.New("message not found")
 // ErrChannelNotFound is returned when the requested channel is not found in the store
 var ErrChannelNotFound = errors.New("channel not found")
 
+// ErrDuplicateKey is returned when a duplicate field is inserted
+var ErrDuplicateKey = errors.New("duplicate key")
+
 // Store represents an abstract store for messages.Channel and messages.Message objects.
 // This interface is used by the HTTP handlers to insert new Messages, channels
 // get and update. This interface can be implemented for any persistent database.
