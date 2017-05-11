@@ -77,9 +77,6 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Respond to the client with the models.User struct encoded as a JSON object
 		Respond(w, user, contentTypeJSONUTF8)
-		// w.Header().Add(headerContentType, contentTypeJSONUTF8)
-		// encoder := json.NewEncoder(w)
-		// encoder.Encode(user)
 	case "GET":
 		// Get all users from the UserStore and write them to the response
 		// as a JSON-encoded array
@@ -92,9 +89,6 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// Respond to the user
 		Respond(w, users, contentTypeJSONUTF8)
-		// w.Header().Add(headerContentType, contentTypeJSONUTF8)
-		// encoder := json.NewEncoder(w)
-		// encoder.Encode(users)
 	}
 }
 
@@ -145,9 +139,6 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Respond to the client with the models.User struct encoded as a JSON object
 	Respond(w, user, contentTypeJSONUTF8)
-	// w.Header().Add(headerContentType, contentTypeJSONUTF8)
-	// encoder := json.NewEncoder(w)
-	// encoder.Encode(user)
 }
 
 // SessionsMineHandler allows authenticated users to sign-out
@@ -191,9 +182,6 @@ func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
 
 		// Respond to the client with the session state's User field, encoded as a JSON object
 		Respond(w, state.User, contentTypeJSONUTF8)
-		// w.Header().Add(headerContentType, contentTypeJSONUTF8)
-		// encoder := json.NewEncoder(w)
-		// encoder.Encode(state.User)
 	case "PATCH":
 		// allow the client to set the FirstName and/or LastName fields for the currently-authenticated user.
 		// Use the users.UserUpdates struct when decoding the post body, and pass that to the .Update() method

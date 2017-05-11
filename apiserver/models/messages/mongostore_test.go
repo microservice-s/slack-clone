@@ -1,7 +1,6 @@
 package messages
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -386,7 +385,6 @@ func TestMongoStoreGetRecentMessages(t *testing.T) {
 		t.Errorf("error unauthed user can get messages %s", err.Error())
 	}
 	cleanup(userStore, messageStore)
-	// fmt.Println(err)
 }
 
 func TestMongoStoreInsertMessage(t *testing.T) {
@@ -497,7 +495,6 @@ func TestMongoStoreUpdateMessage(t *testing.T) {
 	if err != nil {
 		t.Errorf("error updating message from authenticated user: %v", err.Error())
 	}
-	fmt.Println("got past updating normal message")
 
 	// test updating a message that the user is not the creator
 	// add a new user to the mongo

@@ -60,6 +60,7 @@ func addGeneral(ms *MongoStore) {
 	ms.InsertChannel(newG, leet)
 }
 
+// create unique indexes for the name of channels
 func createIndexes(ms *MongoStore) {
 	// ensure index on the channel name
 	chIndex := mgo.Index{
@@ -69,6 +70,15 @@ func createIndexes(ms *MongoStore) {
 		Sparse:     true,
 	}
 	ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).EnsureIndex(chIndex)
+
+	// ensure index on the members array
+	memIndex := mgo.Index{
+		Key:        []string{"members"},
+		Unique:     true,
+		Background: true,
+		Sparse:     true,
+	}
+	ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).EnsureIndex(memIndex)
 }
 
 func authorized(collection *mgo.Collection, query bson.M) error {
@@ -302,16 +312,6 @@ func (ms *MongoStore) GetRecentMessages(channelID interface{}, user *users.User,
 		user.ID = bson.ObjectIdHex(sID)
 	}
 
-	// var result []struct {
-	// 	ID          ChannelID      `json:"id" bson:"_id"`
-	// 	Name        string         `json:"name"`
-	// 	Description string         `json:"description"`
-	// 	CreatedAt   time.Time      `json:"createdAt"`
-	// 	CreatorID   users.UserID   `json:"creatorID"`
-	// 	Members     []users.UserID `json:"members"`
-	// 	Private     bool           `json:"private"`
-	// 	Messages    []Message      `json:"messages"`
-	// }
 	// query mongo for the messages for the given channel and where the user is a member
 	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
 	// check if the user is a member of the channel OR if it is public
@@ -326,6 +326,9 @@ func (ms *MongoStore) GetRecentMessages(channelID interface{}, user *users.User,
 	col = ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection)
 	col.Find(bson.M{"channelid": channelID}).Sort("-createdat").Limit(N).All(&messages)
 
+	// KEEPING THIS COMMENTED CODE HERE AS A GRAVEYARD FOR MY DUMB EFFORT OF DOING THIS AS A
+	// PIPELINE FRAMEWORK. IT'S SLOW AND NOT WHAT IT SHOULD BE USED FOR
+	// GOOD LEARNING THO
 	// pipe := col.Pipe([]bson.M{{"$match": bson.M{"_id": channel.ID}},
 	// 	bson.M{"$match": bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}},
 	// 	bson.M{"$lookup": bson.M{

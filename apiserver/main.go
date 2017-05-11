@@ -149,7 +149,6 @@ func main() {
 	var ferr error
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		f, ferr = os.Create(logFile)
-		fmt.Println(f)
 	} else {
 		f, ferr = os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	}
