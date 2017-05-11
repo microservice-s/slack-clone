@@ -34,6 +34,8 @@ const (
 	apiPasswords       = apiRoot + "passwords/"
 	apiChannels        = apiRoot + "channels"
 	apiSpecificChannel = apiRoot + "channels/"
+	apiMessages        = apiRoot + "messages"
+	apiSpecificMessage = apiRoot + "messages/"
 )
 
 //main is the main entry point for this program
@@ -135,6 +137,10 @@ func main() {
 	// add the channels handlers
 	mux.HandleFunc(apiChannels, hctx.ChannelsHandler)
 	mux.HandleFunc(apiSpecificChannel, hctx.SpecificChannelHandler)
+
+	// add the messages handlers
+	mux.HandleFunc(apiMessages, hctx.MessagesHandler)
+	mux.HandleFunc(apiSpecificMessage, hctx.SpecificMessageHandler)
 
 	// create a new logger to wrap all the handlers with
 	// open a file

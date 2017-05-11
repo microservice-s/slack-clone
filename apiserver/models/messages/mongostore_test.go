@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -72,6 +73,8 @@ func TestMongoStoreInsertChannel(t *testing.T) {
 	if err != nil {
 		t.Errorf("error adding new channel: %v", err.Error())
 	}
+
+	cleanup(userStore, messageStore)
 }
 
 func TestMongoStoreUpdateChannel(t *testing.T) {
@@ -159,9 +162,10 @@ func TestMongoStoreDeleteChannel(t *testing.T) {
 	// insert a few messages
 	for i := 0; i < 10; i++ {
 		newMessage := &NewMessage{
-			Body: strconv.Itoa(i) + " test",
+			Body:      strconv.Itoa(i) + " test",
+			ChannelID: channel.ID,
 		}
-		messageStore.InsertMessage(newMessage, channel.ID)
+		messageStore.InsertMessage(newMessage, u)
 	}
 
 	// delete the channel
@@ -180,6 +184,7 @@ func TestMongoStoreDeleteChannel(t *testing.T) {
 	if err := userStore.DeleteByID(u.ID); err != nil {
 		t.Errorf("error deleting user: %v\n", err)
 	}
+	cleanup(userStore, messageStore)
 }
 
 func TestMongoStoreAddUserToChannel(t *testing.T) {
@@ -274,53 +279,53 @@ func TestMongoStoreAddUserToChannel(t *testing.T) {
 
 }
 
-// func TestMongoStoreRemoveUserFromChannel(t *testing.T) {
-// 	messageStore, err := NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new message mongo store")
-// 	}
+func TestMongoStoreRemoveUserFromChannel(t *testing.T) {
+	messageStore, err := NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new message mongo store")
+	}
 
-// 	userStore, err := users.NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new user mongo store")
-// 	}
+	userStore, err := users.NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new user mongo store")
+	}
 
-// 	// add a new user to the mongo
-// 	u, err := addUser(userStore, "removeTest")
-// 	if err != nil {
-// 		t.Errorf("error adding user: %v", err.Error())
-// 	}
+	// add a new user to the mongo
+	u, err := addUser(userStore, "removeTest")
+	if err != nil {
+		t.Errorf("error adding user: %v", err.Error())
+	}
 
-// 	// add a channel to the mongo
+	// add a channel to the mongo
 
-// 	c, err := addChannel(messageStore, u, "removeChan")
-// 	if err != nil {
-// 		t.Errorf("error adding channel: %v", err.Error())
-// 	}
+	c, err := addChannel(messageStore, u, "removeChan")
+	if err != nil {
+		t.Errorf("error adding channel: %v", err.Error())
+	}
 
-// 	// add the user to the channel
-// 	//err = messageStore.AddUserToChannel(u, c)
-// 	if err != nil {
-// 		t.Errorf("error adding user to channel: %v", err.Error())
-// 	}
+	// add the user to the channel
+	// err = messageStore.AddUserToChannel(u, c)
+	// if err != nil {
+	// 	t.Errorf("error adding user to channel: %v", err.Error())
+	// }
 
-// 	// remove the user from the channel
-// 	//err = messageStore.RemoveUserFromChannel(u, c)
-// 	if err != nil {
-// 		t.Errorf("error removing user from channel: %v", err.Error())
-// 	}
+	// remove the user from the channel
+	err = messageStore.RemoveUserFromChannel(u.ID, c.ID, u.ID)
+	if err != nil {
+		t.Errorf("error removing user from channel: %v", err.Error())
+	}
 
-// 	// check that the user was removed
-// 	c2, err := messageStore.GetAllUserChannels(u)
-// 	if err != nil {
-// 		t.Errorf("error getting user channels: %v", err.Error())
-// 	}
-// 	if len(c2) != 0 {
-// 		t.Errorf("user wasn't removed from channel")
-// 	}
+	// check that the user was removed
+	c2, err := messageStore.GetAllUserChannels(u)
+	if err != nil {
+		t.Errorf("error getting user channels: %v", err.Error())
+	}
+	if len(c2) != 0 {
+		t.Errorf("user wasn't removed from channel")
+	}
 
-// 	cleanup(userStore, messageStore)
-// }
+	cleanup(userStore, messageStore)
+}
 
 // func TestMongoStoreGetRecentMessages(t *testing.T) {
 // 	messageStore, err := NewMongoStore(nil, "test")
@@ -366,7 +371,7 @@ func TestMongoStoreAddUserToChannel(t *testing.T) {
 // 		newMessage := &NewMessage{
 // 			Body: strconv.Itoa(i) + " test",
 // 		}
-// 		//messageStore.InsertMessage(newMessage, channel, u)
+// 		messageStore.InsertMessage(newMessage, channel, u)
 // 	}
 
 // 	unAuthU := &users.User{
@@ -377,87 +382,195 @@ func TestMongoStoreAddUserToChannel(t *testing.T) {
 // 	cleanup(userStore, messageStore)
 // 	// fmt.Println(err)
 // }
-// func TestMongoStoreInsertMessage(t *testing.T) {
-// 	messageStore, err := NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new message mongo store")
-// 	}
 
-// 	userStore, err := users.NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new user mongo store")
-// 	}
+func TestMongoStoreInsertMessage(t *testing.T) {
+	messageStore, err := NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new message mongo store")
+	}
 
-// 	// add a new user to the mongo
-// 	u, err := addUser(userStore, "insertTest")
-// 	if err != nil {
-// 		t.Errorf("error adding user: %v", err.Error())
-// 	}
+	userStore, err := users.NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new user mongo store")
+	}
 
-// 	// add a channel to the mongo
-// 	c, err := addChannel(messageStore, u, "insertChan")
-// 	if err != nil {
-// 		t.Errorf("error adding channel: %v", err.Error())
-// 	}
+	// add a new user to the mongo
+	u, err := addUser(userStore, "insertTest")
+	if err != nil {
+		t.Errorf("error adding user: %v", err.Error())
+	}
 
-// 	newMessage := &NewMessage{
-// 		Body: "insert message test",
-// 	}
-// 	// add a message
-// 	//message, err := messageStore.InsertMessage(newMessage, c, u)
-// 	if err != nil {
-// 		t.Errorf("error inserting message: %v", err.Error())
-// 	}
+	// add a channel to the mongo
+	c, err := addChannel(messageStore, u, "insertChan")
+	if err != nil {
+		t.Errorf("error adding channel: %v", err.Error())
+	}
 
-// 	// if message.Body != "insert message test" {
-// 	// 	t.Errorf("Message body incorrect, got: %v, expected: `insert message test`", message.Body)
-// 	// }
-// 	cleanup(userStore, messageStore)
-// }
-// func TestMongoStoreUpdateMessageDeleteMessage(t *testing.T) {
-// 	messageStore, err := NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new message mongo store")
-// 	}
+	newMessage := &NewMessage{
+		Body:      "insert message test",
+		ChannelID: c.ID,
+	}
+	// add a message
+	message, err := messageStore.InsertMessage(newMessage, u)
+	if err != nil {
+		t.Errorf("error inserting message: %v", err.Error())
+	}
 
-// 	userStore, err := users.NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new user mongo store")
-// 	}
+	if message.Body != "insert message test" {
+		t.Errorf("Message body incorrect, got: %v, expected: `insert message test`", message.Body)
+	}
 
-// 	// add a new user to the mongo
-// 	u, err := addUser(userStore, "insertTest")
-// 	if err != nil {
-// 		t.Errorf("error adding user: %v", err.Error())
-// 	}
+	// try inserting a message with no channel
+	nm := &NewMessage{
+		Body: "test wit no channelID",
+	}
+	message, err = messageStore.InsertMessage(nm, u)
+	if err == nil {
+		t.Errorf("Error: message not validated properly %v", err.Error())
+	}
 
-// 	// add a channel to the mongo
-// 	//c, err := addChannel(messageStore, u, "insertChan")
-// 	if err != nil {
-// 		t.Errorf("error adding channel: %v", err.Error())
-// 	}
+	// try inserting to a channel you are not a part of
+	// delete the user from the channel
+	messageStore.RemoveUserFromChannel(u.ID, c.ID, u.ID)
+	// try inserting a message with no channel
+	nm = &NewMessage{
+		Body:      "test inserting when not part of the channel",
+		ChannelID: c.ID,
+	}
+	message, err = messageStore.InsertMessage(nm, u)
+	if err == nil {
+		t.Errorf("Error: message insert not authenticating properly %v", err.Error())
+	}
+	cleanup(userStore, messageStore)
+}
 
-// 	newMessage := &NewMessage{
-// 		Body: "insert message test",
-// 	}
-// 	// add a message
-// 	//message, err := messageStore.InsertMessage(newMessage, c, u)
-// 	if err != nil {
-// 		t.Errorf("error inserting message: %v", err.Error())
-// 	}
+//TestMongoStoreUPdateMessage tests updating messages
+func TestMongoStoreUpdateMessage(t *testing.T) {
+	messageStore, err := NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new message mongo store")
+	}
 
-// 	// if message.Body != "insert message test" {
-// 	// 	t.Errorf("Message body incorrect, got: %v, expected: `insert message test`", message.Body)
-// 	// }
+	userStore, err := users.NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new user mongo store")
+	}
 
-// 	// TEST UPDATE Message
-// 	// updates := &MessageUpdates{
-// 	// 	Body: "UPDATED message",
-// 	// }
+	// add a new user to the mongo
+	u, err := addUser(userStore, "insertTest")
+	if err != nil {
+		t.Errorf("error adding user: %v", err.Error())
+	}
 
-// 	// err = messageStore.UpdateMessage(updates, message)
+	// add a channel to the mongo
+	c, err := addChannel(messageStore, u, "insertChan")
+	if err != nil {
+		t.Errorf("error adding channel: %v", err.Error())
+	}
 
-// 	// // TEST DELETE message
-// 	// err = messageStore.DeleteMessage(message)
-// 	cleanup(userStore, messageStore)
-// }
+	newMessage := &NewMessage{
+		Body:      "insert message test",
+		ChannelID: c.ID,
+	}
+	// add a message
+	message, err := messageStore.InsertMessage(newMessage, u)
+	if err != nil {
+		t.Errorf("error inserting message: %v", err.Error())
+	}
+
+	if message.Body != "insert message test" {
+		t.Errorf("Message body incorrect, got: %v, expected: `insert message test`", message.Body)
+	}
+
+	//TEST UPDATE Message normal
+	updates := &MessageUpdates{
+		Body: "UPDATED message",
+	}
+
+	err = messageStore.UpdateMessage(updates, message.ID, u)
+	if err != nil {
+		t.Errorf("error updating message from authenticated user: %v", err.Error())
+	}
+	fmt.Println("got past updating normal message")
+
+	// test updating a message that the user is not the creator
+	// add a new user to the mongo
+	u2, err := addUser(userStore, "notAuthed")
+	if err != nil {
+		t.Errorf("error adding user: %v", err.Error())
+	}
+
+	err = messageStore.UpdateMessage(updates, message.ID, u2)
+	if err == nil {
+		t.Errorf("error users can modify others messages: %v", err.Error())
+	}
+
+	cleanup(userStore, messageStore)
+}
+
+func TestMongoStoreDeleteMessage(t *testing.T) {
+	messageStore, err := NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new message mongo store")
+	}
+
+	userStore, err := users.NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new user mongo store")
+	}
+
+	// add a new user to the mongo
+	u, err := addUser(userStore, "insertTest")
+	if err != nil {
+		t.Errorf("error adding user: %v", err.Error())
+	}
+
+	// add a channel to the mongo
+	c, err := addChannel(messageStore, u, "insertChan")
+	if err != nil {
+		t.Errorf("error adding channel: %v", err.Error())
+	}
+
+	newMessage := &NewMessage{
+		Body:      "insert message test",
+		ChannelID: c.ID,
+	}
+	// add a message
+	message, err := messageStore.InsertMessage(newMessage, u)
+	if err != nil {
+		t.Errorf("error inserting message: %v", err.Error())
+	}
+
+	if message.Body != "insert message test" {
+		t.Errorf("Message body incorrect, got: %v, expected: `insert message test`", message.Body)
+	}
+
+	// test deleting the message with the user that created it
+	err = messageStore.DeleteMessage(message.ID, u)
+	_, err = messageStore.GetMessageByID(message.ID)
+	if err == nil {
+		t.Errorf("error deleting message: %v", err.Error())
+	}
+
+	// test deleting the message with a different user
+	// add a message with the first user and try to delete it with another
+	message, err = messageStore.InsertMessage(newMessage, u)
+	if err != nil {
+		t.Errorf("error inserting message: %v", err.Error())
+	}
+
+	if message.Body != "insert message test" {
+		t.Errorf("Message body incorrect, got: %v, expected: `insert message test`", message.Body)
+	}
+
+	// add a new user to the mongo
+	u2, err := addUser(userStore, "otherUser")
+	if err != nil {
+		t.Errorf("error adding user: %v", err.Error())
+	}
+
+	err = messageStore.DeleteMessage(message.ID, u2)
+	if err == nil {
+		t.Errorf("error: users can delete others messages : %v", err.Error())
+	}
+}

@@ -51,12 +51,15 @@ type Store interface {
 	// RemoveUserFromChannel deletes a user from a Channels member list
 	RemoveUserFromChannel(userID interface{}, channelID interface{}, creatorID interface{}) error
 
+	// GetMessageByID returns a message by a given ID
+	GetMessageByID(id interface{}) (*Message, error)
+
 	// InsertMessage adds a message to a channel
-	InsertMessage(newMessage *NewMessage, channelID interface{}) (*Message, error)
+	InsertMessage(newMessage *NewMessage, creator *users.User) (*Message, error)
 
 	// UpdateMessage applies MessageUpdates to a given Message
-	UpdateMessage(update *MessageUpdates, messageID interface{}) error
+	UpdateMessage(updates *MessageUpdates, messageID interface{}, user *users.User) error
 
 	//DeleteMessage removes a message from the store
-	DeleteMessage(message *Message) error
+	DeleteMessage(messageID interface{}, user *users.User) error
 }

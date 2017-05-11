@@ -8,7 +8,7 @@ import (
 
 	"errors"
 
-	"strings"
+	"path"
 
 	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
@@ -85,7 +85,6 @@ func (ctx *Context) ChannelsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // SpecificChannelHandler allows a user to GET the most recent messages of a channel, PATCH to update a channel
-//
 func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Request) {
 	// check the authentication
 	state, err := ctx.authenticated(w, r)
@@ -94,7 +93,7 @@ func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	// get the channelID
-	cID := strings.TrimPrefix(r.URL.Path, "/v1/channels/")
+	_, cID := path.Split(r.URL.Path)
 	switch r.Method {
 	// get the most recent 500 recent messages of a specific channel
 	case "GET":
@@ -185,29 +184,100 @@ func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// MessagesHandler
+// MessagesHandler handles all requests to /v1/messages (POST) will add messages to a specified channel
 func (ctx *Context) MessagesHandler(w http.ResponseWriter, r *http.Request) {
 	// check the authentication
-	_, err := ctx.authenticated(w, r)
+	state, err := ctx.authenticated(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+
 	switch r.Method {
+	// add a message to a specified channel
 	case "POST":
+		// decode the request body into a newChannel struct
+		decoder := json.NewDecoder(r.Body)
+		newMessage := &messages.NewMessage{}
+		if err := decoder.Decode(newMessage); err != nil {
+			http.Error(w, "Error: invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		// validate the message
+		if err := newMessage.Validate(); err != nil {
+			http.Error(w, "error validating message: "+err.Error(),
+				http.StatusBadRequest)
+			return
+		}
+
+		// insert the message to the store and check if it was
+		message, err := ctx.MessageStore.InsertMessage(newMessage, state.User)
+		if err == messages.ErrUnauthorized {
+			http.Error(w, "Error adding message: "+err.Error(),
+				http.StatusForbidden)
+			return
+		} else if err != nil {
+			http.Error(w, "error inserting message: "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+
+		// write the channel to the user
+		Respond(w, message, contentTypeJSONUTF8)
 	}
 }
 
-// SpecificMessageHandler
+// SpecificMessageHandler handles all requests made to the /v1/messages/<message-id> (PATCH) updates messages
+// (DELETE) deletes messages authed
 func (ctx *Context) SpecificMessageHandler(w http.ResponseWriter, r *http.Request) {
 	// check the authentication
-	_, err := ctx.authenticated(w, r)
+	state, err := ctx.authenticated(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+	// get the message id
+	_, mID := path.Split(r.URL.Path)
 	switch r.Method {
+	// allow a user to update a specified message if they are the creator
 	case "PATCH":
+		// Decode the request body into a messages.MessageUpdate struct
+		decoder := json.NewDecoder(r.Body)
+		updates := &messages.MessageUpdates{}
+		if err := decoder.Decode(updates); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		// update the message with the channelID, the updates and the current user
+		err := ctx.MessageStore.UpdateMessage(updates, mID, state.User)
+		// if we got an error write it back to the user that they are unauthorized
+		if err != nil {
+			http.Error(w, "error updating message: "+err.Error(),
+				http.StatusForbidden)
+			return
+		}
+		// write the updated message back to the user
+		message, err := ctx.MessageStore.GetMessageByID(mID)
+		if err != nil {
+			http.Error(w, "error updating message: "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+		// respond
+		Respond(w, message, contentTypeJSONUTF8)
+
+	// allow a user to delete a message if they are the message creator
 	case "DELETE":
+		// delete the message and check the id
+		err := ctx.MessageStore.DeleteMessage(mID, state.User)
+		if err != nil {
+			http.Error(w, "error deleting message: "+err.Error(),
+				http.StatusForbidden)
+			return
+		}
+		// otherwise respond with a simple message that the message was deleted
+		io.WriteString(w, "message deleted\n")
 	}
 }

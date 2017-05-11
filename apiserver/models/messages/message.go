@@ -24,7 +24,8 @@ type Message struct {
 
 // NewMessage represents a new message when created
 type NewMessage struct {
-	Body string `json:"body"`
+	ChannelID ChannelID `json:"channelID"`
+	Body      string    `json:"body"`
 }
 
 // MessageUpdates represents message updates that can be applied to a message
@@ -38,24 +39,24 @@ func (nm *NewMessage) Validate() error {
 		return errors.New("Error: body is zero length")
 	}
 
+	if nm.ChannelID == nil {
+		return errors.New("Error: no channel specified")
+	}
+
 	return nil
 }
 
 // ToMessage converts a NewMessage to a Message
-func (nm *NewMessage) ToMessage(creator *users.User, channel *Channel) (*Message, error) {
+func (nm *NewMessage) ToMessage(creator *users.User) (*Message, error) {
 	// make sure that the creatorID is a bson ID
 	if sID, ok := creator.ID.(string); ok {
 		creator.ID = bson.ObjectIdHex(sID)
 	}
 
-	// make sure that the channelID is a bson ID
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
-	}
 	// return a new message
 	// EditedAt will be null and then can be used to check to display *(edited sym)
 	return &Message{
-		ChannelID: channel.ID,
+		ChannelID: nm.ChannelID,
 		Body:      nm.Body,
 		CreatedAt: time.Now(),
 		CreatorID: creator.ID,
