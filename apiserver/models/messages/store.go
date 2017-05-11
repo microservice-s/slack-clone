@@ -15,6 +15,9 @@ var ErrChannelNotFound = errors.New("channel not found")
 // ErrDuplicateKey is returned when a duplicate field is inserted
 var ErrDuplicateKey = errors.New("duplicate key")
 
+// ErrUnauthorized is returned when a user is unable to see a field
+var ErrUnauthorized = errors.New("user unauthorized")
+
 // Store represents an abstract store for messages.Channel and messages.Message objects.
 // This interface is used by the HTTP handlers to insert new Messages, channels
 // get and update. This interface can be implemented for any persistent database.
@@ -34,25 +37,25 @@ type Store interface {
 
 	// GetRecentMessages gets the most recent N messages
 	// posted to a particular channel if a user is authorized
-	GetRecentMessages(channel *Channel, user *users.User, N int) ([]*Message, error)
+	GetRecentMessages(channelID interface{}, user *users.User, N int) ([]*Message, error)
 
 	// UpdateChannel applies ChannelUpdates to a given Channel
-	UpdateChannel(updates *ChannelUpdates, channel *Channel, user *users.User) error
+	UpdateChannel(updates *ChannelUpdates, channelID interface{}, user *users.User) error
 
 	// DeleteChannel deletes a channel as well as all messages posted to that channel if authorized
-	DeleteChannel(channel *Channel, user *users.User) error
+	DeleteChannel(channelID interface{}, user *users.User) error
 
 	// AddUserToChannel adds a user to a channels Members list if authorized
-	AddUserToChannel(user *users.User, channel *Channel, creator *users.User) error
+	AddUserToChannel(userID interface{}, channelID interface{}, creatorID interface{}) error
 
 	// RemoveUserFromChannel deletes a user from a Channels member list
-	RemoveUserFromChannel(user *users.User, channel *Channel) error
+	RemoveUserFromChannel(userID interface{}, channelID interface{}, creatorID interface{}) error
 
 	// InsertMessage adds a message to a channel
-	InsertMessage(newMessage *NewMessage, channel *Channel) (*Message, error)
+	InsertMessage(newMessage *NewMessage, channelID interface{}) (*Message, error)
 
 	// UpdateMessage applies MessageUpdates to a given Message
-	UpdateMessage(update *MessageUpdates, message *Message) error
+	UpdateMessage(update *MessageUpdates, messageID interface{}) error
 
 	//DeleteMessage removes a message from the store
 	DeleteMessage(message *Message) error

@@ -1,6 +1,8 @@
 package messages
 
 import (
+	"fmt"
+
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -57,6 +59,14 @@ func createIndexes(ms *MongoStore) {
 	ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).EnsureIndex(chIndex)
 }
 
+func authorized(collection *mgo.Collection, query bson.M) error {
+	err := collection.Find(query).One(nil)
+	if err == mgo.ErrNotFound {
+		return ErrUnauthorized
+	}
+	return nil
+}
+
 // GetChannelByID returns a channel by a given ID
 func (ms *MongoStore) GetChannelByID(id interface{}) (*Channel, error) {
 	// convert the ID into it's object ID so we can look up in the database
@@ -104,6 +114,7 @@ func (ms *MongoStore) GetAllUserChannels(user *users.User) ([]*Channel, error) {
 	// search the store
 	err := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).Find(bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}).All(&channels)
 	// return the rror and check if it's ErrNotFound
+	fmt.Println(err)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, ErrChannelNotFound
@@ -143,31 +154,53 @@ func (ms *MongoStore) InsertChannel(newChannel *NewChannel, creator *users.User)
 }
 
 // UpdateChannel applies ChannelUpdates to a given Channel
-func (ms *MongoStore) UpdateChannel(updates *ChannelUpdates, channel *Channel) error {
+func (ms *MongoStore) UpdateChannel(updates *ChannelUpdates, channelID interface{}, user *users.User) error {
 	// convert the channel ID into it's object ID so we can look up in the database
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
+	if sID, ok := channelID.(string); ok {
+		channelID = bson.ObjectIdHex(sID)
 	}
-	// get the collection and update by the bson ID
+
+	// convert the channel ID into it's object ID so we can look up in the database
+	if sID, ok := user.ID.(string); ok {
+		user.ID = bson.ObjectIdHex(sID)
+	}
+
+	// check if the user is authorized to update the channel (if they are the creator)
+	authQ := bson.M{"creatorid": user.ID}
 	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
+	err := authorized(col, authQ)
+	// return the unauth error if we got one
+	if err != nil {
+		return err
+	}
+
+	// otherwise update the channel
 	bUpdates := bson.M{"$set": updates}
-	return col.UpdateId(channel.ID, bUpdates)
+	return col.UpdateId(channelID, bUpdates)
 }
 
-// DeleteChannel deletes a channel as well as all messages posted to that channel
-func (ms *MongoStore) DeleteChannel(channel *Channel) error {
+// DeleteChannel deletes a channel as well as all messages posted to that channel if they are the creator
+func (ms *MongoStore) DeleteChannel(channelID interface{}, user *users.User) error {
 	// convert the channel ID into it's object ID so we can look up in the database
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
+	if sID, ok := channelID.(string); ok {
+		channelID = bson.ObjectIdHex(sID)
+	}
+	// check if the user is authorized to update the channel (if they are the creator)
+	authQ := bson.M{"creatorid": user.ID}
+	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
+	err := authorized(col, authQ)
+	// return the unauth error if we got one
+	if err != nil {
+		return err
 	}
 
 	// delete all messages that are in the channel from the messages collection
-	_, err := ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).RemoveAll(bson.M{"channelid": channel.ID})
+	_, err = ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).RemoveAll(bson.M{"channelid": channelID})
 	if err != nil {
 		return err
 	}
 	// delete the channel from the channel collection
-	err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).RemoveId(channel.ID)
+	err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).RemoveId(channelID)
 	if err != nil {
 		return err
 	}
@@ -175,18 +208,31 @@ func (ms *MongoStore) DeleteChannel(channel *Channel) error {
 }
 
 // AddUserToChannel adds a user to a channels Members list
-func (ms *MongoStore) AddUserToChannel(user *users.User, channel *Channel) error {
+func (ms *MongoStore) AddUserToChannel(userID interface{}, channelID interface{}, creatorID interface{}) error {
 	// convert the user ID into it's object ID so we can look up in the database
-	if sID, ok := user.ID.(string); ok {
-		user.ID = bson.ObjectIdHex(sID)
+	if sID, ok := userID.(string); ok {
+		userID = bson.ObjectIdHex(sID)
 	}
 	// convert the channel ID into it's object ID so we can look up in the database
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
+	if sID, ok := channelID.(string); ok {
+		channelID = bson.ObjectIdHex(sID)
 	}
 
+	// convert the channel ID into it's object ID so we can look up in the database
+	if sID, ok := creatorID.(string); ok {
+		creatorID = bson.ObjectIdHex(sID)
+	}
+
+	// check the authorization of the creator if they are the creator OR if the channel is public
+	authQ := bson.M{"$and": []bson.M{bson.M{"_id": channelID}, bson.M{"$or": []bson.M{bson.M{"creatorid": creatorID}, bson.M{"private": false}}}}}
+	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
+	err := authorized(col, authQ)
+	// return the unauth error if we got one
+	if err != nil {
+		return err
+	}
 	// upsert the user to the array in the mongostore (will only add a user if they aren't in the array already!)
-	_, err := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).UpsertId(channel.ID, bson.M{"$addToSet": bson.M{"members": user.ID}})
+	_, err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).UpsertId(channelID, bson.M{"$addToSet": bson.M{"members": userID}})
 	if err != nil {
 		return err
 	}
@@ -194,16 +240,27 @@ func (ms *MongoStore) AddUserToChannel(user *users.User, channel *Channel) error
 }
 
 // RemoveUserFromChannel deletes a user from a Channels member list
-func (ms *MongoStore) RemoveUserFromChannel(user *users.User, channel *Channel) error {
+func (ms *MongoStore) RemoveUserFromChannel(userID interface{}, channelID interface{}, creatorID interface{}) error {
 	// convert the user ID into it's object ID so we can look up in the database
-	if sID, ok := user.ID.(string); ok {
-		user.ID = bson.ObjectIdHex(sID)
+	if sID, ok := userID.(string); ok {
+		userID = bson.ObjectIdHex(sID)
 	}
 	// convert the channel ID into it's object ID so we can look up in the database
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
+	if sID, ok := channelID.(string); ok {
+		channelID = bson.ObjectIdHex(sID)
 	}
-	err := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).UpdateId(channel.ID, bson.M{"$pull": bson.M{"members": user.ID}})
+	// convert the channel ID into it's object ID so we can look up in the database
+	if sID, ok := creatorID.(string); ok {
+		creatorID = bson.ObjectIdHex(sID)
+	}
+
+	// check the authorization of the creator if they are the creator OR if the channel is public
+	authQ := bson.M{"$and": []bson.M{bson.M{"_id": channelID}, bson.M{"$or": []bson.M{bson.M{"creatorid": userID}, bson.M{"private": false}}}}}
+	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
+	err := authorized(col, authQ)
+
+	// pull the user from the list of members
+	err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).UpdateId(channelID, bson.M{"$pull": bson.M{"members": userID}})
 	if err != nil {
 		return err
 	}
@@ -212,16 +269,51 @@ func (ms *MongoStore) RemoveUserFromChannel(user *users.User, channel *Channel) 
 
 // GetRecentMessages gets the most recent N messages
 // posted to a particular channel if it is public or the user is a member
-func (ms *MongoStore) GetRecentMessages(channel *Channel, user *users.User, N int) ([]*Message, error) {
+func (ms *MongoStore) GetRecentMessages(channelID interface{}, user *users.User, N int) ([]*Message, error) {
 	// convert the channel ID into it's object ID so we can look up in the database
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
+	if sID, ok := channelID.(string); ok {
+		channelID = bson.ObjectIdHex(sID)
+	}
+
+	// convert the user ID into it's object ID so we can look up in the database
+	if sID, ok := user.ID.(string); ok {
+		user.ID = bson.ObjectIdHex(sID)
+	}
+
+	// var result []struct {
+	// 	ID          ChannelID      `json:"id" bson:"_id"`
+	// 	Name        string         `json:"name"`
+	// 	Description string         `json:"description"`
+	// 	CreatedAt   time.Time      `json:"createdAt"`
+	// 	CreatorID   users.UserID   `json:"creatorID"`
+	// 	Members     []users.UserID `json:"members"`
+	// 	Private     bool           `json:"private"`
+	// 	Messages    []Message      `json:"messages"`
+	// }
+	// query mongo for the messages for the given channel and where the user is a member
+	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
+	// check if the user is a member of the channel OR if it is public
+	err := col.Find(bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}).One(nil)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, ErrUnauthorized
+		}
+		return nil, err
 	}
 	messages := []*Message{}
-	// query mongo for the messages for the given channel and where the user is a member
-	col := ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection)
-	query := col.Find(bson.M{"$and": []bson.M{bson.M{"channelid": channel.ID}, bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}}})
-	err := query.Sort("-createdat").Limit(N).All(&messages)
+	col = ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection)
+	col.Find(bson.M{"channelid": channelID}).Sort("-createdat").Limit(N).All(&messages)
+
+	// pipe := col.Pipe([]bson.M{{"$match": bson.M{"_id": channel.ID}},
+	// 	bson.M{"$match": bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}},
+	// 	bson.M{"$lookup": bson.M{
+	// 		"from":         "messages",
+	// 		"localField":   "_id",
+	// 		"foreignField": "channelid",
+	// 		"as":           "messages"}}})
+	// err := pipe.Iter().All(&result)
+	// query := col.Find(bson.M{"$and": []bson.M{bson.M{"channelid": channel.ID}, bson.M{"$or": []bson.M{bson.M{"members": user.ID}, bson.M{"private": false}}}}})
+	// err := query.Sort("-createdat").Limit(N).All(&messages)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, ErrMessageNotFound
@@ -233,29 +325,30 @@ func (ms *MongoStore) GetRecentMessages(channel *Channel, user *users.User, N in
 }
 
 // InsertMessage adds a new message to the database
-func (ms *MongoStore) InsertMessage(newMessage *NewMessage, channel *Channel, creator *users.User) (*Message, error) {
-	// convert the channel ID into it's object ID so we can look up in the database
-	if sID, ok := channel.ID.(string); ok {
-		channel.ID = bson.ObjectIdHex(sID)
-	}
+func (ms *MongoStore) InsertMessage(newMessage *NewMessage, channelID interface{}) (*Message, error) {
+	// // convert the channel ID into it's object ID so we can look up in the database
+	// if sID, ok := channelID.(string); ok {
+	// 	channelID = bson.ObjectIdHex(sID)
+	// }
 
-	// convert the creator ID into it's object ID so we can look up in the database
-	if sID, ok := creator.ID.(string); ok {
-		creator.ID = bson.ObjectIdHex(sID)
-	}
+	// // convert the creator ID into it's object ID so we can look up in the database
+	// if sID, ok := creator.ID.(string); ok {
+	// 	creator.ID = bson.ObjectIdHex(sID)
+	// }
 
-	// convert the message by passing the creator and channel
-	message, err := newMessage.ToMessage(creator, channel)
-	if err != nil {
-		return nil, err
-	}
-	message.ID = bson.NewObjectId()
-	// insert the message to the database
-	err = ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).Insert(message)
-	if err != nil {
-		return nil, err
-	}
-	return message, nil
+	// // convert the message by passing the creator and channel
+	// message, err := newMessage.ToMessage(creator, channel)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// message.ID = bson.NewObjectId()
+	// // insert the message to the database
+	// err = ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).Insert(message)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return message, nil
+	return nil, nil
 }
 
 // GetMessageByID returns a message by a given ID
@@ -279,22 +372,24 @@ func (ms *MongoStore) GetMessageByID(id interface{}) (*Message, error) {
 }
 
 // UpdateMessage applies MessageUpdates to a given Message
-func (ms *MongoStore) UpdateMessage(updates *MessageUpdates, message *Message) error {
-	// convert the message ID into it's object ID so we can look up in the database
-	if sID, ok := message.ID.(string); ok {
-		message.ID = bson.ObjectIdHex(sID)
-	}
+func (ms *MongoStore) UpdateMessage(update *MessageUpdates, messageID interface{}) error {
+	// 	// convert the message ID into it's object ID so we can look up in the database
+	// 	if sID, ok := message.ID.(string); ok {
+	// 		message.ID = bson.ObjectIdHex(sID)
+	// 	}
 
-	col := ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection)
-	bUpdates := bson.M{"$set": updates}
-	return col.UpdateId(message.ID, bUpdates)
+	// 	col := ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection)
+	// 	bUpdates := bson.M{"$set": updates}
+	// 	return col.UpdateId(message.ID, bUpdates)
+	return nil
 }
 
 //DeleteMessage removes a message from the store
 func (ms *MongoStore) DeleteMessage(message *Message) error {
 	// convert the message ID into it's object ID so we can look up in the database
-	if sID, ok := message.ID.(string); ok {
-		message.ID = bson.ObjectIdHex(sID)
-	}
-	return ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).RemoveId(message.ID)
+	// if sID, ok := message.ID.(string); ok {
+	// 	message.ID = bson.ObjectIdHex(sID)
+	// }
+	// return ms.Session.DB(ms.DatabaseName).C(ms.MessageCollection).RemoveId(message.ID)
+	return nil
 }
