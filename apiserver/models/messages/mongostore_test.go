@@ -70,8 +70,8 @@ func TestMongoStoreInsertChannel(t *testing.T) {
 		t.Errorf("error adding new channel: %v", err.Error())
 	}
 	_, err = addChannel(messageStore, u, "updateChan")
-	if err != nil {
-		t.Errorf("error adding new channel: %v", err.Error())
+	if err == nil {
+		t.Errorf("error checking duplicate key: %v", err.Error())
 	}
 
 	cleanup(userStore, messageStore)
@@ -303,12 +303,6 @@ func TestMongoStoreRemoveUserFromChannel(t *testing.T) {
 		t.Errorf("error adding channel: %v", err.Error())
 	}
 
-	// add the user to the channel
-	// err = messageStore.AddUserToChannel(u, c)
-	// if err != nil {
-	// 	t.Errorf("error adding user to channel: %v", err.Error())
-	// }
-
 	// remove the user from the channel
 	err = messageStore.RemoveUserFromChannel(u.ID, c.ID, u.ID)
 	if err != nil {
@@ -327,61 +321,73 @@ func TestMongoStoreRemoveUserFromChannel(t *testing.T) {
 	cleanup(userStore, messageStore)
 }
 
-// func TestMongoStoreGetRecentMessages(t *testing.T) {
-// 	messageStore, err := NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new message mongo store")
-// 	}
+func TestMongoStoreGetRecentMessages(t *testing.T) {
+	messageStore, err := NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new message mongo store")
+	}
 
-// 	userStore, err := users.NewMongoStore(nil, "test")
-// 	if err != nil {
-// 		t.Fatalf("error creating new user mongo store")
-// 	}
+	userStore, err := users.NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new user mongo store")
+	}
 
-// 	nu := &users.NewUser{
-// 		Email:        "test@test.com",
-// 		UserName:     "tester",
-// 		FirstName:    "Test",
-// 		LastName:     "Tester",
-// 		Password:     "password",
-// 		PasswordConf: "password",
-// 	}
+	nu := &users.NewUser{
+		Email:        "test@test.com",
+		UserName:     "tester",
+		FirstName:    "Test",
+		LastName:     "Tester",
+		Password:     "password",
+		PasswordConf: "password",
+	}
 
-// 	u, err := userStore.Insert(nu)
-// 	if err != nil {
-// 		t.Errorf("error inserting user: %v", err)
-// 	}
+	u, err := userStore.Insert(nu)
+	if err != nil {
+		t.Errorf("error inserting user: %v", err)
+	}
 
-// 	if nil == u {
-// 		t.Fatalf("nil returned from MemStore.Insert()--you probably haven't implemented NewUser.ToUser() yet")
-// 	}
-// 	newChannel := &NewChannel{
-// 		Name:        "test",
-// 		Description: "test",
-// 		Private:     true,
-// 	}
+	if nil == u {
+		t.Fatalf("nil returned from MemStore.Insert()--you probably haven't implemented NewUser.ToUser() yet")
+	}
+	newChannel := &NewChannel{
+		Name:        "test",
+		Description: "test",
+		Private:     true,
+	}
 
-// 	channel, err := messageStore.InsertChannel(newChannel, u)
-// 	if err != nil {
-// 		t.Errorf("error inserting new channel %s", err.Error())
-// 	}
+	channel, err := messageStore.InsertChannel(newChannel, u)
+	if err != nil {
+		t.Errorf("error inserting new channel %s", err.Error())
+	}
 
-// 	// insert a few messages
-// 	for i := 0; i < 10; i++ {
-// 		newMessage := &NewMessage{
-// 			Body: strconv.Itoa(i) + " test",
-// 		}
-// 		messageStore.InsertMessage(newMessage, channel, u)
-// 	}
+	// insert a few messages
+	for i := 0; i < 100; i++ {
+		newMessage := &NewMessage{
+			Body:      strconv.Itoa(i) + " test",
+			ChannelID: channel.ID,
+		}
+		messageStore.InsertMessage(newMessage, u)
+	}
 
-// 	unAuthU := &users.User{
-// 		ID: 1111,
-// 	}
-// 	messages, _ := messageStore.GetRecentMessages(channel, unAuthU, 100)
-// 	fmt.Println(messages)
-// 	cleanup(userStore, messageStore)
-// 	// fmt.Println(err)
-// }
+	messages, err := messageStore.GetRecentMessages(channel.ID, u, 100)
+	if err != nil {
+		t.Errorf("error getting recent messages %s", err.Error())
+	}
+	if len(messages) != 100 {
+		t.Errorf("error getting recent messages %s", err.Error())
+	}
+
+	// try with an unauth user
+	unAuthU := &users.User{
+		ID: 1111,
+	}
+	_, err = messageStore.GetRecentMessages(channel.ID, unAuthU, 100)
+	if err == nil {
+		t.Errorf("error unauthed user can get messages %s", err.Error())
+	}
+	cleanup(userStore, messageStore)
+	// fmt.Println(err)
+}
 
 func TestMongoStoreInsertMessage(t *testing.T) {
 	messageStore, err := NewMongoStore(nil, "test")
@@ -573,4 +579,6 @@ func TestMongoStoreDeleteMessage(t *testing.T) {
 	if err == nil {
 		t.Errorf("error: users can delete others messages : %v", err.Error())
 	}
+
+	cleanup(userStore, messageStore)
 }

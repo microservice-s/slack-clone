@@ -43,7 +43,21 @@ func NewMongoStore(session *mgo.Session, databaseName string) (*MongoStore, erro
 	}
 	// create the index for the name field
 	createIndexes(store)
+	// add general channel
+	addGeneral(store)
+
 	return store, nil
+}
+
+// add a general channel when starting up
+func addGeneral(ms *MongoStore) {
+	newG := &NewChannel{
+		Name: "General",
+	}
+	leet := &users.User{
+		ID: bson.ObjectId("1337"),
+	}
+	ms.InsertChannel(newG, leet)
 }
 
 func createIndexes(ms *MongoStore) {
@@ -188,6 +202,10 @@ func (ms *MongoStore) DeleteChannel(channelID interface{}, user *users.User) err
 	// convert the channel ID into it's object ID so we can look up in the database
 	if sID, ok := channelID.(string); ok {
 		channelID = bson.ObjectIdHex(sID)
+	}
+	// convert the user ID into it's object ID so we can look up in the database
+	if sID, ok := user.ID.(string); ok {
+		user.ID = bson.ObjectIdHex(sID)
 	}
 	// check if the user is authorized to update the channel (if they are the creator)
 	authQ := bson.M{"creatorid": user.ID}
@@ -414,6 +432,10 @@ func (ms *MongoStore) DeleteMessage(messageID interface{}, user *users.User) err
 	//convert the message ID into it's object ID so we can look up in the database
 	if sID, ok := messageID.(string); ok {
 		messageID = bson.ObjectIdHex(sID)
+	}
+	//convert the iser ID into it's object ID so we can look up in the database
+	if sID, ok := user.ID.(string); ok {
+		user.ID = bson.ObjectIdHex(sID)
 	}
 
 	// check if the user is authorized to delete the message (if they are the creator)

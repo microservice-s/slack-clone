@@ -53,6 +53,11 @@ func (nm *NewMessage) ToMessage(creator *users.User) (*Message, error) {
 		creator.ID = bson.ObjectIdHex(sID)
 	}
 
+	// make sure that the ChannelID is a bson ID
+	if sID, ok := nm.ChannelID.(string); ok {
+		nm.ChannelID = bson.ObjectIdHex(sID)
+	}
+
 	// return a new message
 	// EditedAt will be null and then can be used to check to display *(edited sym)
 	return &Message{

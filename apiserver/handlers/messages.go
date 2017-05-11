@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -32,7 +31,6 @@ func (ctx *Context) authenticated(w http.ResponseWriter, r *http.Request) (*Sess
 func (ctx *Context) ChannelsHandler(w http.ResponseWriter, r *http.Request) {
 	// check the authentication
 	state, err := ctx.authenticated(w, r)
-	fmt.Println(state.User)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -180,7 +178,7 @@ func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		// otherwise respond with a simple message that the channel was deleted
-		io.WriteString(w, "user added to channel\n")
+		io.WriteString(w, "user removed from channel\n")
 	}
 }
 
