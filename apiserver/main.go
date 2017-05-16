@@ -15,6 +15,7 @@ import (
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/passwordreset"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
+	"github.com/aethanol/challenges-aethanol/apiserver/websockets"
 )
 
 const defaultPort = "443"
@@ -36,6 +37,7 @@ const (
 	apiSpecificChannel = apiRoot + "channels/"
 	apiMessages        = apiRoot + "messages"
 	apiSpecificMessage = apiRoot + "messages/"
+	apiWebsocket       = apiRoot + "websocket"
 )
 
 //main is the main entry point for this program
@@ -108,6 +110,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("error creating message store: %v", err)
 	}
+
+	// get the Notifier for websockets
+	notifier, err := websockets.NewNotifier()
+	if err != nil {
+		log.Fatalf("error creating notifier: %v", err)
+	}
+
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
@@ -117,6 +126,7 @@ func main() {
 		MessageStore: messageStore,
 		ResetStore:   resetStore,
 		EmailPass:    emailPass,
+		Notifier:     notifier,
 	}
 
 	// Create a new mux handlers to it
@@ -141,6 +151,9 @@ func main() {
 	// add the messages handlers
 	mux.HandleFunc(apiMessages, hctx.MessagesHandler)
 	mux.HandleFunc(apiSpecificMessage, hctx.SpecificMessageHandler)
+
+	// add the websocket upgrade handler
+	mux.HandleFunc(apiWebsocket, hctx.WebSocketUpgradeHandler)
 
 	// create a new logger to wrap all the handlers with
 	// open a file
