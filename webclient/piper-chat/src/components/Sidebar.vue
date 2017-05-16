@@ -1,16 +1,12 @@
 <template>
-    <div class="chat">
-        <side-bar></side-bar>
+    <div class="side-bar">
+        <h1>HELLO WORLD</h1>
     </div>
 </template>
 
 <script>
-    import Sidebar from './Sidebar'
     export default {
-      name: 'chat',
-      components: {
-        'side-bar': Sidebar
-      },
+      name: 'side-bar',
       data () {
         return {
           loading: false,
