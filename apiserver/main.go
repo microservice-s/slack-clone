@@ -9,13 +9,13 @@ import (
 	mgo "gopkg.in/mgo.v2"
 	redis "gopkg.in/redis.v5"
 
+	"github.com/aethanol/challenges-aethanol/apiserver/events"
 	"github.com/aethanol/challenges-aethanol/apiserver/handlers"
 	"github.com/aethanol/challenges-aethanol/apiserver/middleware"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/passwordreset"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
-	"github.com/aethanol/challenges-aethanol/apiserver/websockets"
 )
 
 const defaultPort = "443"
@@ -112,10 +112,7 @@ func main() {
 	}
 
 	// get the Notifier for websockets
-	notifier, err := websockets.NewNotifier()
-	if err != nil {
-		log.Fatalf("error creating notifier: %v", err)
-	}
+	notifier := events.NewNotifier()
 
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
@@ -128,6 +125,9 @@ func main() {
 		EmailPass:    emailPass,
 		Notifier:     notifier,
 	}
+
+	// start the websocket notifier
+	hctx.Notifier.Start()
 
 	// Create a new mux handlers to it
 	mux := http.NewServeMux()

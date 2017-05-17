@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"github.com/aethanol/challenges-aethanol/apiserver/events"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/passwordreset"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
-	"github.com/aethanol/challenges-aethanol/apiserver/websockets"
 )
 
 // Context contains the stores for the server
@@ -16,5 +16,5 @@ type Context struct {
 	MessageStore messages.Store
 	ResetStore   passwordreset.Store
 	EmailPass    string
-	Notifier     *websockets.Notifier
+	Notifier     *events.Notifier
 }
