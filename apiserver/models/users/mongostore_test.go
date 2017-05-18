@@ -1,9 +1,15 @@
 package users
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestMemStore(t *testing.T) {
-	store := NewMemStore()
+func TestMongoStore(t *testing.T) {
+	store, err := NewMongoStore(nil, "test")
+	if err != nil {
+		t.Fatalf("error creating new mongo store")
+	}
+
 	nu := &NewUser{
 		Email:        "test@test.com",
 		UserName:     "tester",
@@ -17,6 +23,7 @@ func TestMemStore(t *testing.T) {
 	if err != nil {
 		t.Errorf("error inserting user: %v\n", err)
 	}
+
 	if nil == u {
 		t.Fatalf("nil returned from MemStore.Insert()--you probably haven't implemented NewUser.ToUser() yet")
 	}
@@ -69,10 +76,18 @@ func TestMemStore(t *testing.T) {
 	if err := store.Update(upd, u); err != nil {
 		t.Errorf("error updating user: %v\n", err)
 	}
-	if u.FirstName != "UPDATED Test" {
+	// query the db to see if it was updated
+	u3, err := store.GetByID(u.ID)
+	if u3.FirstName != "UPDATED Test" {
 		t.Errorf("FirstName field not updated: expected `UPDATED Test` but got `%s`\n", u.FirstName)
 	}
-	if u.LastName != "UPDATED Tester" {
-		t.Errorf("FirstName field not updated: expected `UPDATED Tester` but got `%s`\n", u.LastName)
+	if u3.LastName != "UPDATED Tester" {
+		t.Errorf("LastName field not updated: expected `UPDATED Tester` but got `%s`\n", u.LastName)
 	}
+
+	// clean up the database and delete the user that we added
+	if err := store.DeleteByID(u.ID); err != nil {
+		t.Errorf("error deleting user: %v\n", err)
+	}
+
 }

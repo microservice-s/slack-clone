@@ -23,13 +23,13 @@ func NewMemStore() *MemStore {
 
 //GetAll returns all users
 func (mus *MemStore) GetAll() ([]*User, error) {
-	users := []*User{}
+	users := make([]*User, len(mus.entries))
 	copy(users, mus.entries)
 	return users, nil
 }
 
 //GetByID returns the User with the given ID
-func (mus *MemStore) GetByID(id UserID) (*User, error) {
+func (mus *MemStore) GetByID(id interface{}) (*User, error) {
 	for _, u := range mus.entries {
 		if u.ID == id {
 			return u, nil
@@ -86,6 +86,11 @@ func (mus *MemStore) Update(updates *UserUpdates, currentuser *User) error {
 	}
 	u.FirstName = updates.FirstName
 	u.LastName = updates.LastName
+	return nil
+}
+
+// ResetPassword applies password resets to the user with the given email
+func (mus *MemStore) ResetPassword(email, newPassword string) error {
 	return nil
 }
 

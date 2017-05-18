@@ -1,7 +1,9 @@
-package sessions
+package passwordreset
 
 import (
 	"time"
+
+	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
 
 	"encoding/json"
 
@@ -12,22 +14,25 @@ import (
 //related to session IDs. This keeps session ID keys
 //separate from other keys in the shared redis key
 //namespace.
-const redisKeyPrefix = "sid:"
+const redisKeyPrefix = "token:"
 const defaultAddr = "127.0.0.1:6379"
 
-//RedisStore represents a session.Store backed by redis.
-type RedisStore struct {
+// ResetEmail represents the key for the token backed by redis
+type ResetEmail string
+
+//RedisResetStore represents a passwordreset.Store backed by redis.
+type RedisResetStore struct {
 	//Redis client used to talk to redis server.
 	Client *redis.Client
 	//Used for key expiry time on redis.
-	SessionDuration time.Duration
+	ResetDuration time.Duration
 }
 
-//NewRedisStore constructs a new RedisStore, using the provided client and
+//NewRedisResetStore constructs a new RedisStore, using the provided client and
 //session duration. If the `client`` is nil, it will be set to redis.NewClient()
 //pointing at a local redis instance. If `sessionDuration`` is negative, it will
 //be set to `DefaultSessionDuration`.
-func NewRedisStore(client *redis.Client, sessionDuration time.Duration) *RedisStore {
+func NewRedisResetStore(client *redis.Client, resetDuration time.Duration) *RedisResetStore {
 
 	//set defaults for parameters
 	//if `client` is nil, set it to a redis.NewClient()
@@ -42,21 +47,21 @@ func NewRedisStore(client *redis.Client, sessionDuration time.Duration) *RedisSt
 
 	//if `sessionDuration` is < 0
 	//set it to DefaultSessionDuration
-	if sessionDuration < 0 {
-		sessionDuration = DefaultSessionDuration
+	if resetDuration < 0 {
+		resetDuration = DefaultResetDuration
 	}
 	//return a new RedisStore with the Client field set to `client`
 	//and the SessionDuration field set to `sessionDuration`
-	return &RedisStore{
-		Client:          client,
-		SessionDuration: sessionDuration,
+	return &RedisResetStore{
+		Client:        client,
+		ResetDuration: resetDuration,
 	}
 }
 
 //Store implementation
 
 //Save associates the provided `state` data with the provided `sid` in the store.
-func (rs *RedisStore) Save(sid SessionID, state interface{}) error {
+func (rs *RedisResetStore) Save(email ResetEmail, state interface{}) error {
 	//encode the `state` into JSON
 	jbuf, err := json.Marshal(state)
 	if err != nil {
@@ -65,43 +70,26 @@ func (rs *RedisStore) Save(sid SessionID, state interface{}) error {
 	//use the redis client's Set() method, using `sid.getRedisKey()`
 	//as the key, the JSON as the data, and the store's session duration
 	//as the expiration
-	status := rs.Client.Set(sid.getRedisKey(), jbuf, rs.SessionDuration)
+	status := rs.Client.Set(email.getRedisKey(), jbuf, rs.ResetDuration)
 	//Set() returns a StatusCmd, which has an .Err() method that will
 	//report any error that occurred; return the result of that method
 	return status.Err()
 }
 
-//Get retrieves the previously saved data for the session id,
-//and populates the `state` parameter with it. This will also
-//reset the data's time to live in the store.
-func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
+//Get retrieves the previously saved data for the resetToken,
+//and populates the `state` parameter with it.
+func (rs *RedisResetStore) Get(email ResetEmail, state interface{}) error {
 
-	// EXTRA CREDIT using the pipeline feature
-	// to do the .Get() and .Expire() commands
-	// in just one round-trip!
-	pipe := rs.Client.Pipeline()
-	cmd := pipe.Get(sid.getRedisKey())
-	pipe.Expire(sid.getRedisKey(), rs.SessionDuration)
-	// execute the pipeline and check for errors
-	_, err := pipe.Exec()
-	// the err of the pipe exec will be the first error returned
-	// check if it's the redis.Nil error meaning that the looked up key doesn't exist
+	// get the token from the associated email
+	jbuf, err := rs.Client.Get(email.getRedisKey()).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return ErrStateNotFound
+			return sessions.ErrStateNotFound
 		}
 		return err
 	}
 
-	// get the bytes from the get response and err
-	jbuf, err := cmd.Bytes()
-	if err != nil {
-		return err
-	}
-
-	//get the returned bytes and Unmarshal them into
-	//the `state` parameter
-	//if you get an error, return it
+	// unmarshall the token to provided state
 	err = json.Unmarshal(jbuf, state)
 	if err != nil {
 		return err
@@ -110,18 +98,22 @@ func (rs *RedisStore) Get(sid SessionID, state interface{}) error {
 }
 
 //Delete deletes all data associated with the session id from the store.
-func (rs *RedisStore) Delete(sid SessionID) error {
+func (rs *RedisResetStore) Delete(email ResetEmail) error {
 	//use the .Del() method to delete the data associated
 	//with the key `sid.getRedisKey()`, and use .Err()
 	//to report any errors that occurred
-	err := rs.Client.Del(sid.getRedisKey()).Err()
+	err := rs.Client.Del(email.getRedisKey()).Err()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+func (email ResetEmail) String() string {
+	return string(email)
+}
+
 //returns the key to use in redis
-func (sid SessionID) getRedisKey() string {
-	return redisKeyPrefix + sid.String()
+func (email ResetEmail) getRedisKey() string {
+	return redisKeyPrefix + email.String()
 }

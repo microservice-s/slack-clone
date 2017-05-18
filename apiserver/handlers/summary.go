@@ -105,9 +105,7 @@ Loop:
 				if rel == "icon" || rel == "shortcut icon" {
 					url, _ := url.Parse(href)
 					if !url.IsAbs() && !strings.HasPrefix(url.String(), "//www") {
-						fmt.Println(url.String())
 						urlSt := path.Join(URL, url.String())
-						fmt.Printf(urlSt)
 						props["image"] = urlSt
 						// handle the case that the url just starts with www
 					} else if strings.HasPrefix(url.String(), "//www") {
@@ -128,7 +126,6 @@ Loop:
 			// then check the header type of the response body to make sure it's an image
 			ctype := res.Header.Get("Content-Type")
 			if strings.HasPrefix(ctype, "image") {
-				fmt.Println(ctype)
 				props["image"] = favicon
 			}
 		}
@@ -180,12 +177,6 @@ func getPageSummary(url string) (openGraphProps, error) {
 //summary information about the returned page and sends those summary properties
 //to the client as a JSON-encoded object.
 func SummaryHandler(w http.ResponseWriter, r *http.Request) {
-
-	//Add the following header to the response
-	//   Access-Control-Allow-Origin: *
-	//this will allow JavaScript served from other origins
-	//to call this API
-	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	//get the `url` query string parameter
 	//if you use r.FormValue() it will also handle cases where

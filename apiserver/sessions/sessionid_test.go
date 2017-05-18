@@ -3,6 +3,7 @@ package sessions
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"testing"
 )
 
@@ -10,6 +11,7 @@ const testSigningKey = "a very secret key"
 
 func TestNewID(t *testing.T) {
 	sid, err := NewSessionID(testSigningKey)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,10 +20,12 @@ func TestNewID(t *testing.T) {
 		t.Errorf("Signed ID string was empty")
 	}
 
-	_, err = ValidateID(sid.String(), testSigningKey)
+	sid2, err := ValidateID(sid.String(), testSigningKey)
 	if nil != err {
+		fmt.Printf("generated: %v \n expected: %v\n", sid, sid2)
 		t.Fatal(err)
 	}
+
 }
 
 func TestInvalidKey(t *testing.T) {

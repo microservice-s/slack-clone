@@ -1,9 +1,11 @@
 package sessions
 
-import "testing"
-import "net/http/httptest"
-import "strings"
-import "net/http"
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
 
 func TestSessionCycle(t *testing.T) {
 	state := struct {
@@ -83,5 +85,22 @@ func TestGetSessionID(t *testing.T) {
 	}
 	if sid2.String() != sid.String() {
 		t.Errorf("session IDs were different: expected %s but got %s\n", sid.String(), sid2.String())
+	}
+}
+
+func TestDupeSessionID(t *testing.T) {
+	key := "thisissupersecret"
+	sid, err := NewSessionID(key)
+	if err != nil {
+		t.Errorf("error generating new SessionID: %s\n", err.Error())
+	}
+
+	sid2, err2 := NewSessionID(key)
+	if err2 != nil {
+		t.Errorf("error generating new SessionID: %s\n", err.Error())
+	}
+
+	if sid == sid2 {
+		t.Errorf("error: duplicate sessions! got: %v\n expected: %v", sid, sid2)
 	}
 }

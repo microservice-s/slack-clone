@@ -4,3 +4,5 @@ node_modules
 .vscode
 apiserver/apiserver
 tls/
+apiserver/sessions/.gitignore
+*.log
