@@ -13,10 +13,6 @@ import (
 
 const headerAuthorization = "Authorization"
 
-func respond() {
-
-}
-
 // UsersHandler allows new users to sign-up (POST) or returns all users (GET)
 func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -80,9 +76,7 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Respond to the client with the models.User struct encoded as a JSON object
-		w.Header().Add(headerContentType, contentTypeJSONUTF8)
-		encoder := json.NewEncoder(w)
-		encoder.Encode(user)
+		Respond(w, user, contentTypeJSONUTF8)
 	case "GET":
 		// Get all users from the UserStore and write them to the response
 		// as a JSON-encoded array
@@ -93,10 +87,8 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 				http.StatusInternalServerError)
 			return
 		}
-		// TODO: write a respond function to the user
-		w.Header().Add(headerContentType, contentTypeJSONUTF8)
-		encoder := json.NewEncoder(w)
-		encoder.Encode(users)
+		// Respond to the user
+		Respond(w, users, contentTypeJSONUTF8)
 	}
 }
 
@@ -136,7 +128,8 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 		ClientAddr: r.RemoteAddr,
 		User:       user,
 	}
-	// Begin a new session with the context session signing key and the previous state
+	// Begin a new session with the context session signing key and the state
+	// Adds the header authorization to the response
 	if _, err := sessions.BeginSession(ctx.SessionKey, ctx.SessionStore,
 		state, w); err != nil {
 		http.Error(w, "error beginning new session: "+err.Error(),
@@ -145,9 +138,7 @@ func (ctx *Context) SessionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond to the client with the models.User struct encoded as a JSON object
-	w.Header().Add(headerContentType, contentTypeJSONUTF8)
-	encoder := json.NewEncoder(w)
-	encoder.Encode(user)
+	Respond(w, user, contentTypeJSONUTF8)
 }
 
 // SessionsMineHandler allows authenticated users to sign-out
@@ -176,20 +167,63 @@ func (ctx *Context) SessionsMineHandler(w http.ResponseWriter, r *http.Request) 
 
 // UsersMeHanlder allows a users to get their current session state
 func (ctx *Context) UsersMeHanlder(w http.ResponseWriter, r *http.Request) {
-	// Get the session state
-	state := &SessionState{}
+	switch r.Method {
+	case "GET":
+		// Get the session state
+		state := &SessionState{}
 
-	// get the state of the browser that is accessing their page
-	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
-	if err != nil {
-		http.Error(w, "error getting session state"+err.Error(),
-			http.StatusInternalServerError)
-		return
+		// get the state of the browser that is accessing their page
+		_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
+		if err != nil {
+			http.Error(w, "error getting session state "+err.Error(),
+				http.StatusForbidden)
+			return
+		}
+
+		// Respond to the client with the session state's User field, encoded as a JSON object
+		Respond(w, state.User, contentTypeJSONUTF8)
+	case "PATCH":
+		// allow the client to set the FirstName and/or LastName fields for the currently-authenticated user.
+		// Use the users.UserUpdates struct when decoding the post body, and pass that to the .Update() method
+		// of the UserStore on your handler context.
+
+		// Get the session state
+		state := &SessionState{}
+
+		// get the state of the browser that is accessing their page
+		sid, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
+		if err != nil {
+			http.Error(w, "error getting session state "+err.Error(),
+				http.StatusForbidden)
+			return
+		}
+
+		// Decode the request body into a users.UserUpdates struct
+		decoder := json.NewDecoder(r.Body)
+		updates := &users.UserUpdates{}
+		if err := decoder.Decode(updates); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		// update the user in the mongostore
+		if err := ctx.UserStore.Update(updates, state.User); err != nil {
+			http.Error(w, "error updating user "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+
+		// update the session state with the user
+		state.User.FirstName = updates.FirstName
+		state.User.LastName = updates.LastName
+		if err := ctx.SessionStore.Save(sid, state); err != nil {
+			http.Error(w, "error updating user "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+
+		// Respond to the client with a simple message saying that the user has been updated
+		io.WriteString(w, "user updated\n")
 	}
-
-	// Respond to the client with the session state's User field, encoded as a JSON object
-	w.Header().Add(headerContentType, contentTypeJSONUTF8)
-	encoder := json.NewEncoder(w)
-	encoder.Encode(state.User)
 
 }

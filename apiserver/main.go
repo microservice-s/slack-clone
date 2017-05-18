@@ -11,6 +11,7 @@ import (
 
 	"github.com/aethanol/challenges-aethanol/apiserver/handlers"
 	"github.com/aethanol/challenges-aethanol/apiserver/middleware"
+	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/passwordreset"
 	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
@@ -23,14 +24,18 @@ const (
 	//     /v1/sessions: SessionsHandler
 	//     /v1/sessions/mine: SessionsMineHandler
 	//     /v1/users/me: UsersMeHandler
-	apiRoot         = "/v1/"
-	apiSummary      = apiRoot + "summary"
-	apiUsers        = apiRoot + "users"
-	apiSessions     = apiRoot + "sessions"
-	apiSessionsMine = apiSessions + "/mine"
-	apiUsersMe      = apiUsers + "/me"
-	apiReset        = apiRoot + "resetcodes"
-	apiPasswords    = apiRoot + "passwords/"
+	apiRoot            = "/v1/"
+	apiSummary         = apiRoot + "summary"
+	apiUsers           = apiRoot + "users"
+	apiSessions        = apiRoot + "sessions"
+	apiSessionsMine    = apiSessions + "/mine"
+	apiUsersMe         = apiUsers + "/me"
+	apiReset           = apiRoot + "resetcodes"
+	apiPasswords       = apiRoot + "passwords/"
+	apiChannels        = apiRoot + "channels"
+	apiSpecificChannel = apiRoot + "channels/"
+	apiMessages        = apiRoot + "messages"
+	apiSpecificMessage = apiRoot + "messages/"
 )
 
 //main is the main entry point for this program
@@ -98,12 +103,18 @@ func main() {
 		log.Fatal("no EMAILPASS env variable set")
 	}
 
+	// get the message store
+	messageStore, err := messages.NewMongoStore(mongoSession, "production")
+	if err != nil {
+		log.Fatalf("error creating message store: %v", err)
+	}
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
 		SessionKey:   sessionKey,
 		SessionStore: sesStore,
 		UserStore:    userStore,
+		MessageStore: messageStore,
 		ResetStore:   resetStore,
 		EmailPass:    emailPass,
 	}
@@ -123,6 +134,14 @@ func main() {
 	//for the apiSummary route
 	mux.HandleFunc(apiSummary, handlers.SummaryHandler)
 
+	// add the channels handlers
+	mux.HandleFunc(apiChannels, hctx.ChannelsHandler)
+	mux.HandleFunc(apiSpecificChannel, hctx.SpecificChannelHandler)
+
+	// add the messages handlers
+	mux.HandleFunc(apiMessages, hctx.MessagesHandler)
+	mux.HandleFunc(apiSpecificMessage, hctx.SpecificMessageHandler)
+
 	// create a new logger to wrap all the handlers with
 	// open a file
 	logFile := "logs.log"
@@ -130,7 +149,6 @@ func main() {
 	var ferr error
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		f, ferr = os.Create(logFile)
-		fmt.Println(f)
 	} else {
 		f, ferr = os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	}

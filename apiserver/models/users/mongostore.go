@@ -52,13 +52,9 @@ func (ms *MongoStore) GetAll() ([]*User, error) {
 	return users, nil
 }
 
-func handleQueryError() {
-
-}
-
 //GetByID returns the User with the given ID
 func (ms *MongoStore) GetByID(id interface{}) (*User, error) {
-	// type assert that the given id is a string and convert to bson
+	// check if the ID needs to be converted to bson
 	if sID, ok := id.(string); ok {
 		id = bson.ObjectIdHex(sID)
 	}
@@ -124,7 +120,7 @@ func (ms *MongoStore) Insert(newUser *NewUser) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return user, err
+	return user, nil
 }
 
 //Update applies UserUpdates to the currentUser
