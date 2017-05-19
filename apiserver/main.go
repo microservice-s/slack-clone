@@ -74,6 +74,7 @@ func main() {
 	}
 	// Use the REDISADDR to create a new redis Client
 	reddisAddr := os.Getenv("REDISADDR")
+	fmt.Printf("connecting to redis server at %s...\n", reddisAddr)
 	roptions := redis.Options{
 		Addr: reddisAddr,
 	}
@@ -127,7 +128,7 @@ func main() {
 	}
 
 	// start the websocket notifier
-	hctx.Notifier.Start()
+	go hctx.Notifier.Start()
 
 	// Create a new mux handlers to it
 	mux := http.NewServeMux()
@@ -153,13 +154,14 @@ func main() {
 	mux.HandleFunc(apiSpecificMessage, hctx.SpecificMessageHandler)
 
 	// add the websocket upgrade handler
-	mux.HandleFunc(apiWebsocket, hctx.WebSocketUpgradeHandler)
+	http.HandleFunc(apiWebsocket, hctx.WebSocketUpgradeHandler)
 
 	// create a new logger to wrap all the handlers with
 	// open a file
 	logFile := "logs.log"
 	var f *os.File
 	var ferr error
+	// check if the logs file exists and create it if it doesn't
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		f, ferr = os.Create(logFile)
 	} else {

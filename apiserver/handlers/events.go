@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 
+	"log"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -16,6 +18,7 @@ var upgrader = websocket.Upgrader{
 
 //WebSocketUpgradeHandler handles websocket upgrade requests
 func (ctx *Context) WebSocketUpgradeHandler(w http.ResponseWriter, r *http.Request) {
+
 	// ensure the user is authenticated
 	_, err := ctx.authenticated(w, r)
 	if err != nil {
@@ -26,18 +29,11 @@ func (ctx *Context) WebSocketUpgradeHandler(w http.ResponseWriter, r *http.Reque
 	//upgrade this request to a web socket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		http.Error(w, "error upgrading connection: "+err.Error(),
-			http.StatusInternalServerError)
+		log.Printf("Error adding client: %s", err.Error())
 		return
 	}
-
 	//after upgrading, use the `.AddClient()` method on your notifier
 	//to add the new client to your notifier's map of clients
 	ctx.Notifier.AddClient(conn)
-	// if err != nil {
-	// 	http.Error(w, "error adding client: "+err.Error(),
-	// 		http.StatusInternalServerError)
-	// 	return
-	// }
 
 }

@@ -255,7 +255,10 @@ func (ctx *Context) MessagesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// write the channel to the user
+		// notify the clients of the new message
+		ctx.notify("new message", message)
+
+		// write the message to the user
 		Respond(w, message, contentTypeJSONUTF8)
 	}
 }
@@ -297,6 +300,10 @@ func (ctx *Context) SpecificMessageHandler(w http.ResponseWriter, r *http.Reques
 				http.StatusInternalServerError)
 			return
 		}
+
+		// notify the clients of the message update
+		ctx.notify("message update", message)
+
 		// respond
 		Respond(w, message, contentTypeJSONUTF8)
 
@@ -309,6 +316,9 @@ func (ctx *Context) SpecificMessageHandler(w http.ResponseWriter, r *http.Reques
 				http.StatusForbidden)
 			return
 		}
+
+		// notify the clients of the message update
+		ctx.notify("message deleted", mID)
 		// otherwise respond with a simple message that the message was deleted
 		io.WriteString(w, "message deleted\n")
 	}

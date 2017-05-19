@@ -75,6 +75,8 @@ func (ctx *Context) UsersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// notify the clients of the new user
+		ctx.notify("new user", user)
 		// Respond to the client with the models.User struct encoded as a JSON object
 		Respond(w, user, contentTypeJSONUTF8)
 	case "GET":
