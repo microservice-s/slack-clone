@@ -14,8 +14,7 @@
 </template>
 
 <script>
-    import auth from '../services/auth'
-
+    import { signIn } from '../api'
     export default {
       name: 'signin',
       data () {
@@ -27,11 +26,11 @@
       },
       methods: {
         signIn: function () {
-          auth.signIn(this.email, this.password, signedIn => {
+          signIn(this.email, this.password, this, signedIn => {
             if (!signedIn) {
               this.error = true
             } else {
-              this.$router.replace(this.$route.query.redirect || '/profile')
+              this.$router.replace(this.$route.query.redirect || '/chat')
             }
           })
         }

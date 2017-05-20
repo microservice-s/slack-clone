@@ -21,10 +21,12 @@ var ErrInvalidScheme = errors.New("scheme used in Authorization header is not su
 func BeginSession(signingKey string, store Store, state interface{}, w http.ResponseWriter) (SessionID, error) {
 	//create a new SessionID
 	//if you get an error, return InvalidSessionID and the error
+	fmt.Println("signing with: " + signingKey)
 	sid, err := NewSessionID(signingKey)
 	if err != nil {
 		return InvalidSessionID, err
 	}
+
 	//save the state to the store
 	//if you get an error, return InvalidSessionID and the error
 	err = store.Save(sid, state)
@@ -61,6 +63,7 @@ func GetSessionID(r *http.Request, signingKey string) (SessionID, error) {
 	//trim off the "Bearer " prefix and validate the remaining id
 	//if you get an error return InvalidSessionID and the error
 	sid := strings.TrimPrefix(auth, schemeBearer)
+	fmt.Println("validating with: " + signingKey)
 	vsid, err := ValidateID(sid, signingKey)
 	if err != nil {
 		return InvalidSessionID, err
@@ -75,6 +78,7 @@ func GetState(r *http.Request, signingKey string, store Store, state interface{}
 	//get the SessionID from the request
 	//if you get an error, return the SessionID and error
 	sid, err := GetSessionID(r, signingKey)
+	fmt.Println(sid)
 	if err != nil {
 		return sid, err
 	}

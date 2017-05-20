@@ -32,7 +32,7 @@
             "lastName": "test"
         }
         var auth
-        var request = new Request('https://localhost:4000/v1/users', {
+        var request = new Request('https://api.aethanol.me/v1/users', {
             method: 'POST',
             headers: new Headers({
                 'Content-Type': 'application/json'
@@ -43,7 +43,7 @@
             auth = resp.headers.get('Authorization')
             auth = auth.substr(7)
             //use `wss://` for servers that support TLS
-		    var websock = new WebSocket("wss://localhost:4000/v1/websocket?auth=" + auth)
+		    var websock = new WebSocket("wss://api.aethanol.me/v1/websocket?auth=" + auth)
             console.log(websock)
             websock.addEventListener("message", function(wsevent) {
                 console.log("HAP")

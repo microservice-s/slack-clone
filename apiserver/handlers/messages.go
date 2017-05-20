@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -134,6 +135,7 @@ func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Reques
 		io.WriteString(w, "channel deleted\n")
 	// add a user to a channel
 	case "LINK":
+		fmt.Println("linking")
 		// check if there is a Link header in the request
 		headLink := r.Header.Get("Link")
 		// case where someone is adding a user to a channel

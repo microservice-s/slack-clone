@@ -1,12 +1,10 @@
 <template>
-    <div class="side-bar">
+    <div class="side-bar" v-if="!loading">
       <h2>Channels</h2>
-      <!--<router-link v-for"channel in channels">
-        {{channel.title}}
-      </router-link>-->
       <ul>
-        <li v-for="channel in channels">
-          {{channel.title}}
+        <li v-for="channel in channels"
+          v-bind:key="channel.id" >
+          <router-link :to="/channel/ + channel.id">{{channel.name}}</router-link>
         </li>
       </ul>
       <router-link to="/signout">Sign Out</router-link>
@@ -19,15 +17,24 @@
       name: 'side-bar',
       data () {
         return {
-          loading: false,
+          loading: true,
           error: false,
           user: ''
         }
+      },
+      created () {
+        this.$store.dispatch('fetchChannels', { self: this })
       },
       computed: {
         ...mapGetters([
           'channels'
         ])
+      },
+      methods: {
+        filterChannels () {
+          this.loading = false
+          // return this.$store.state.channels
+        }
       }
     }
 </script>
