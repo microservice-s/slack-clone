@@ -17,4 +17,5 @@ type Context struct {
 	ResetStore   passwordreset.Store
 	EmailPass    string
 	Notifier     *events.Notifier
+	SvcAddr      string
 }
