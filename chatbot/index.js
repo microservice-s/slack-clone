@@ -13,6 +13,7 @@ const express = require('express'),
 const app = express();
 // set up body parser middleware to parse any text from post requests (queries)
 app.use(bodyParser.text());
+
 const port = process.env.PORT || '80';
 const host = process.env.HOST || '';
 const witaiToken = process.env.WITAITOKEN;
@@ -24,6 +25,12 @@ if (!witaiToken) {
 
 const witaiClient = new Wit({ accessToken: witaiToken });
 
+const dbAddr = process.env.DBADDR;
+if (!dbAddr) {
+	console.error("please set DBADDR to where your database is");
+	process.exit(1);
+}
+
 // set up the mongo connection
 co(function*() {
   // Connection URL
@@ -31,7 +38,7 @@ co(function*() {
   console.log("Connected correctly to server");
   // Use connect method to connect to the Server
   app.locals.db = yield MongoClient.connect(url);
-
+  
 }).catch(function(err) {
   console.log(err.stack);
 });
@@ -71,7 +78,6 @@ function handleUsers (req, res, data) {
         } else {
             res.send(`${memberNames.join()} are in the ${witChan} channel`);
         }
-        
      }).catch(function(err) {
         res.status(500).send();
         console.log(err.stack);
@@ -331,6 +337,12 @@ app.post("/v1/bot", (req, res, next) => {
 		})
 		.catch(next); // passes the error to express (who will report)
 
+});
+
+//error handler
+app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(err.status || 500).send(err.message);
 });
 
 app.listen(port, host, () => {
