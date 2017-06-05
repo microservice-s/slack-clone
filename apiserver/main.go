@@ -166,7 +166,7 @@ func main() {
 	http.HandleFunc(apiWebsocket, hctx.WebSocketUpgradeHandler)
 
 	// add the chatbot handler
-	http.HandleFunc(apiBot, hctx.ChatbotHandler)
+	mux.HandleFunc(apiBot, hctx.ChatbotHandler)
 
 	// create a new logger to wrap all the handlers with
 	// open a file

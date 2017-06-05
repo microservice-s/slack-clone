@@ -39,7 +39,7 @@ co(function*() {
 // who is in the XYZ channel?
 function handleUsers (req, res, data) {
     if (!data.entities.channel) {
-        res.send("I'm sorry dave, I'm afraid I can't do that.");
+        res.send("I'm sorry dave, I'm afraid I can't do that. You didn't provide a channel for me to query.");
         return;
     }
      co(function*() {
@@ -47,7 +47,7 @@ function handleUsers (req, res, data) {
 
         // get the channel the user is asking for
         let witChan = data.entities.channel[0].value;
-        let channel = yield db.collection('channels').find({name: witChan}, {_id: 0, members: 1}).limit(1).toArray();
+        let channel = yield db.collection('channels').find({name: new RegExp(witChan, "i")}, {_id: 0, members: 1}).limit(1).toArray();
         if (channel.length == 0) {
             res.send("I'm sorry dave, I'm afraid I can't do that.");
             return;
@@ -80,7 +80,7 @@ function handleUsers (req, res, data) {
 
 function handleUsersNegation (req, res, data) {
     if (!data.entities.channel) {
-        res.send("I'm sorry dave, I'm afraid I can't do that.");
+        res.send("I'm sorry dave, I'm afraid I can't do that. You didn't provide a channel for me to query.");
         return;
     }
 
@@ -89,7 +89,7 @@ function handleUsersNegation (req, res, data) {
 
         // get the channel the user is asking for
         let witChan = data.entities.channel[0].value;
-        let channel = yield db.collection('channels').find({name: witChan}, { members: 1}).limit(1).toArray();
+        let channel = yield db.collection('channels').find({name: new RegExp(witChan, "i")}, { members: 1}).limit(1).toArray();
         if (channel.length == 0) {
             res.send("I'm sorry dave, I'm afraid I can't do that.");
             return;
@@ -133,7 +133,7 @@ function handleUsersNegation (req, res, data) {
 
 function handleHigestPoster (req, res, data) {
     if (!data.entities.channel) {
-        res.send("I'm sorry dave, I'm afraid I can't do that.");
+        res.send("I'm sorry dave, I'm afraid I can't do that. You didn't provide a channel for me to query.");
         return;
     }
     
@@ -143,7 +143,7 @@ function handleHigestPoster (req, res, data) {
 
         // get the channel the user is asking for
         let witChan = data.entities.channel[0].value;
-        let channel = yield db.collection('channels').find({name: witChan}).limit(1).toArray();
+        let channel = yield db.collection('channels').find({name: new RegExp(witChan, "i")}).limit(1).toArray();
         if (channel.length == 0) {
             res.send("I'm sorry dave, I'm afraid I can't do that.");
             return;
@@ -206,7 +206,8 @@ function handlePostTime (req, res, data) {
         if (data.entities.channel) {
             // find the channel id from the name
             let witChan = data.entities.channel[0].value;
-            let channel = yield db.collection('channels').find({name: witChan}).limit(1).toArray();
+            let channel = yield db.collection('channels').find({name: new RegExp(witChan, "i")}).limit(1).toArray();
+            console.log(witChan)
             let cID = new mongo.ObjectID(channel[0]._id);
             message = yield col.find({ $and : [{creatorid: new mongo.ObjectID(userID)}, {channelid: cID}]} ).sort({createdat: -1}).limit(1).toArray();
             channelR = ` to the ${witChan} channel`
@@ -218,9 +219,10 @@ function handlePostTime (req, res, data) {
             res.send("I'm sorry dave, I'm afraid I can't do that.");
         } else {
             let m = moment(message[0].createdat)
+            let time = m.format("h:mm a")
             let day = ordinalSuffix(m.format("DD"));
             let month = m.format("MMM");
-            res.send(`The last time you posted${channelR} was on ${month} ${day}`);
+            res.send(`The last time you posted${channelR} was on ${month} ${day} at ${time}`);
         }
         
         // Get first two documents that match the query
@@ -234,7 +236,7 @@ function handlePostTime (req, res, data) {
 
 function handlePostCount (req, res, data) {
     if (!data.entities.channel) {
-        res.send("I'm sorry dave, I'm afraid I can't do that.");
+        res.send("I'm sorry dave, I'm afraid I can't do that. You didn't provide a channel for me to query.");
         return;
     }
     
@@ -244,7 +246,7 @@ function handlePostCount (req, res, data) {
         let userID = user.id;
         const db = req.app.locals.db;
         let witChan = data.entities.channel[0].value;
-        let channel = yield db.collection('channels').find({name: witChan}).limit(1).toArray();
+        let channel = yield db.collection('channels').find({name: new RegExp(witChan, "i")}).limit(1).toArray();
         if (channel.length == 0) {
             res.send("I'm sorry dave, I'm afraid I can't do that.");
             return;
@@ -254,8 +256,10 @@ function handlePostCount (req, res, data) {
         let col = db.collection('messages');
         let count = 0;
         if (data.entities.datetime) {
-            count = yield col.count({ $and : [{creatorid: new mongo.ObjectID(userID)}, {channelid: cID}, {createdat: new Date(data.entities.datetime[0].value)}]});
-            console.log(count);
+            // get the beginning and end of the day
+            let start = new Date(data.entities.datetime[0].value);
+            let end = new Date(start.getTime() + 86400000);
+            count = yield col.count({ $and : [{creatorid: new mongo.ObjectID(userID)}, {channelid: cID}, {createdat: {$gte: start, $lt: end}}]});
             let m = moment(data.entities.datetime[0].value);
             let day = ordinalSuffix(m.format("DD"));
             let month = m.format("MMM");
@@ -263,7 +267,7 @@ function handlePostCount (req, res, data) {
         } else {
             count = yield col.count({ $and : [{creatorid: new mongo.ObjectID(userID)}, {channelid: cID}]});
             console.log(count);
-            res.send(`You have posted to the ${channel[0].name} ${count} times`);
+            res.send(`You have posted to the ${channel[0].name} channel ${count} times`);
         }
 
      }).catch(function(err) {
