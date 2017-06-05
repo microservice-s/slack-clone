@@ -16,9 +16,9 @@ then
 fi 
 
 docker run -d \
---name chatsvc \
+--name botserver \
 --network appnet \
-aethan/botsvc
+aethan/botserver
 
 docker run -d \
 --name apiserver \
