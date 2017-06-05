@@ -34,7 +34,7 @@ if (!dbAddr) {
 // set up the mongo connection
 co(function*() {
   // Connection URL
-  var url = 'mongodb://localhost:27017/production';
+  var url = `mongodb://${dbAddr}/production`;
   console.log("Connected correctly to server");
   // Use connect method to connect to the Server
   app.locals.db = yield MongoClient.connect(url);

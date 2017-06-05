@@ -27,7 +27,7 @@ docker run -d \
 -p 443:443 \
 -e REDISADDR=redissvr:6379 \
 -e DBADDR=mongosvr:27017 \
--e BOTSVCADDR=botsvc \
+-e BOTSVCADDR=botserver \
 -v /etc/letsencrypt:/etc/letsencrypt:ro \
 -e TLSKEY=$TLSKEY \
 -e TLSCERT=$TLSCERT \
