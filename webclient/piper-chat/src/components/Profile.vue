@@ -1,5 +1,4 @@
 <template>
-  <transition name="fade">
     <div class="profile">
         <div v-if="error">Error loading user</div>
         <img :src="user.photoURL" alt="profile picture">
@@ -10,8 +9,6 @@
         <div>{{user.email}}</div>
         <router-link to="/signout">Sign Out</router-link>
     </div>
-  </transition>
-    
 </template>
 
 <script>
