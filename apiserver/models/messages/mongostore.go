@@ -1,6 +1,8 @@
 package messages
 
 import (
+	"fmt"
+
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -55,30 +57,37 @@ func addGeneral(ms *MongoStore) {
 		Name: "General",
 	}
 	leet := &users.User{
-		ID: bson.ObjectId("1337"),
+		ID: bson.ObjectId("000000001337"),
 	}
 	ms.InsertChannel(newG, leet)
 }
 
 // create unique indexes for the name of channels
+// and case insensitive index on the channel
 func createIndexes(ms *MongoStore) {
 	// ensure index on the channel name
 	chIndex := mgo.Index{
 		Key:        []string{"name"},
 		Unique:     true,
 		Background: true,
-		Sparse:     true,
+		Sparse:     false,
+		Collation: &mgo.Collation{ // <------ this is broke??? idk I hacked it with a regex instead
+			Locale:   "en",
+			Strength: 1,
+		},
 	}
 	ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).EnsureIndex(chIndex)
 
-	// ensure index on the members array
-	memIndex := mgo.Index{
-		Key:        []string{"members"},
-		Unique:     true,
-		Background: true,
-		Sparse:     true,
-	}
-	ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).EnsureIndex(memIndex)
+	// ensure case insensitive index on the channel
+	// THIS IS WRONG, UNIQUE INDEX ON AN ARRAY IS FOR THE ENTIRE COL, NOT THE ONE ARRAY
+	// // ensure index on the members array
+	// memIndex := mgo.Index{
+	// 	Key:        []string{"members"},
+	// 	Unique:     true,
+	// 	Background: true,
+	// 	Sparse:     true,
+	// }
+	// ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).EnsureIndex(memIndex)
 }
 
 func authorized(collection *mgo.Collection, query bson.M) error {
@@ -172,6 +181,7 @@ func (ms *MongoStore) InsertChannel(newChannel *NewChannel, creator *users.User)
 	// it has a unique index!!
 	err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).Insert(channel)
 	if err != nil {
+		fmt.Println(err)
 		if mgo.IsDup(err) {
 			return nil, ErrDuplicateKey
 		}
@@ -255,15 +265,17 @@ func (ms *MongoStore) AddUserToChannel(userID interface{}, channelID interface{}
 		creatorID = bson.ObjectIdHex(sID)
 	}
 
-	// check the authorization of the creator if they are the creator OR if the channel is public
-	authQ := bson.M{"$and": []bson.M{bson.M{"_id": channelID}, bson.M{"$or": []bson.M{bson.M{"creatorid": creatorID}, bson.M{"private": false}}}}}
+	// check the authorization of the creator if they are the creator AND the user isn't in the memberslist OR if the channel is public
+	authQ := bson.M{"$and": []bson.M{bson.M{"_id": channelID}, bson.M{"members": bson.M{"$ne": userID}}, bson.M{"$or": []bson.M{bson.M{"creatorid": creatorID}, bson.M{"private": false}}}}}
 	col := ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection)
 	err := authorized(col, authQ)
 	// return the unauth error if we got one
 	if err != nil {
 		return err
 	}
-	// upsert the user to the array in the mongostore (will only add a user if they aren't in the array already!)
+	// // check that the user isn't already in the channel
+	// _, err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).Find()
+	// upsert the user to the array in the mongostore
 	_, err = ms.Session.DB(ms.DatabaseName).C(ms.ChannelCollection).UpsertId(channelID, bson.M{"$addToSet": bson.M{"members": userID}})
 	if err != nil {
 		return err

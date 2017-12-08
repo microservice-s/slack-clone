@@ -38,6 +38,7 @@ const (
 	apiMessages        = apiRoot + "messages"
 	apiSpecificMessage = apiRoot + "messages/"
 	apiWebsocket       = apiRoot + "websocket"
+	apiBot             = apiRoot + "bot"
 )
 
 //main is the main entry point for this program
@@ -115,6 +116,13 @@ func main() {
 	// get the Notifier for websockets
 	notifier := events.NewNotifier()
 
+	// get the bot service's address
+	// and add a ReverseProxy handler for it
+	botSvcAddr := os.Getenv("BOTSVCADDR")
+	if len(botSvcAddr) == 0 {
+		log.Fatal("you must supply BOTSVCADDR")
+	}
+
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
@@ -125,6 +133,7 @@ func main() {
 		ResetStore:   resetStore,
 		EmailPass:    emailPass,
 		Notifier:     notifier,
+		SvcAddr:      botSvcAddr,
 	}
 
 	// start the websocket notifier
@@ -155,6 +164,9 @@ func main() {
 
 	// add the websocket upgrade handler
 	http.HandleFunc(apiWebsocket, hctx.WebSocketUpgradeHandler)
+
+	// add the chatbot handler
+	mux.HandleFunc(apiBot, hctx.ChatbotHandler)
 
 	// create a new logger to wrap all the handlers with
 	// open a file

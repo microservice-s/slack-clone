@@ -1,0 +1,20 @@
+{
+  "name": "chatbot",
+  "version": "1.0.0",
+  "description": "This is a chatbot for a slack clone for info344",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ethan Anderson",
+  "license": "ISC",
+  "dependencies": {
+    "assert": "^1.4.1",
+    "body-parser": "^1.17.2",
+    "co": "^4.6.0",
+    "express": "^4.15.3",
+    "moment": "^2.18.1",
+    "mongodb": "^2.2.27",
+    "node-wit": "^4.2.0"
+  }
+}

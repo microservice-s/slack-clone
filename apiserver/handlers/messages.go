@@ -11,7 +11,7 @@ import (
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 )
 
-// ChannelsHandler allows a user to (GET) their valid channels and (POST) add a user to a channels member list
+// ChannelsHandler allows a user to (GET) their valid channels and (POST) add a channel to the store
 func (ctx *Context) ChannelsHandler(w http.ResponseWriter, r *http.Request) {
 	// check the authentication
 	state, err := ctx.authenticated(w, r)
