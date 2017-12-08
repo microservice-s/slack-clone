@@ -10,6 +10,7 @@ import Test from '@/components/Test'
 import Profile from '@/components/Profile'
 import Chat from '@/components/Chat'
 import NotFound from '@/components/NotFound'
+import Channel from '@/components/Channel'
 
 function requireAuth (to, from, next) {
   if (!auth.signedIn()) {
@@ -25,7 +26,7 @@ function requireAuth (to, from, next) {
 function authed (to, from, next) {
   if (auth.signedIn()) {
     next({
-      path: '/profile'// ,
+      path: '/chat'// ,
       // query: { redirect: to.fullPath }
     })
   } else {
@@ -64,6 +65,12 @@ export default new Router({
       path: '/chat',
       name: 'Chat',
       component: Chat,
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/channel/:id',
+      name: 'Channel',
+      component: Channel,
       beforeEnter: requireAuth
     },
     { path: '/signout',

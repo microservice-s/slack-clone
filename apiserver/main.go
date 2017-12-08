@@ -9,6 +9,7 @@ import (
 	mgo "gopkg.in/mgo.v2"
 	redis "gopkg.in/redis.v5"
 
+	"github.com/aethanol/challenges-aethanol/apiserver/events"
 	"github.com/aethanol/challenges-aethanol/apiserver/handlers"
 	"github.com/aethanol/challenges-aethanol/apiserver/middleware"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
@@ -36,6 +37,7 @@ const (
 	apiSpecificChannel = apiRoot + "channels/"
 	apiMessages        = apiRoot + "messages"
 	apiSpecificMessage = apiRoot + "messages/"
+	apiWebsocket       = apiRoot + "websocket"
 )
 
 //main is the main entry point for this program
@@ -72,6 +74,7 @@ func main() {
 	}
 	// Use the REDISADDR to create a new redis Client
 	reddisAddr := os.Getenv("REDISADDR")
+	fmt.Printf("connecting to redis server at %s...\n", reddisAddr)
 	roptions := redis.Options{
 		Addr: reddisAddr,
 	}
@@ -108,6 +111,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("error creating message store: %v", err)
 	}
+
+	// get the Notifier for websockets
+	notifier := events.NewNotifier()
+
 	// Create and initialize a new handlers.Context with the signing key,
 	// the session store, and the user store.
 	hctx := &handlers.Context{
@@ -117,7 +124,11 @@ func main() {
 		MessageStore: messageStore,
 		ResetStore:   resetStore,
 		EmailPass:    emailPass,
+		Notifier:     notifier,
 	}
+
+	// start the websocket notifier
+	go hctx.Notifier.Start()
 
 	// Create a new mux handlers to it
 	mux := http.NewServeMux()
@@ -142,11 +153,15 @@ func main() {
 	mux.HandleFunc(apiMessages, hctx.MessagesHandler)
 	mux.HandleFunc(apiSpecificMessage, hctx.SpecificMessageHandler)
 
+	// add the websocket upgrade handler
+	http.HandleFunc(apiWebsocket, hctx.WebSocketUpgradeHandler)
+
 	// create a new logger to wrap all the handlers with
 	// open a file
 	logFile := "logs.log"
 	var f *os.File
 	var ferr error
+	// check if the logs file exists and create it if it doesn't
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		f, ferr = os.Create(logFile)
 	} else {

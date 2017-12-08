@@ -1,10 +1,19 @@
 <template>
   <div class="message">
-    <span class="message-content">{{message.content}}</span>
+    <li class="message-list-item">
+      <!--<h5 class="message-author-name">{{ message.authorName }}</h5>-->
+      <div class="message-time">
+        {{ message.createdAt }}
+      </div>
+      <div class="message-text">{{ message.body }}</div>
+    </li>
   </div>
 </template>
 <script>
   export default {
-    props: ['message']
+    name: 'Message',
+    props: {
+      message: Object
+    }
   }
 </script>

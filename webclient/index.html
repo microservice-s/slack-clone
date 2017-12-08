@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>WebSockets Demo</title>
+</head>
+<body>
+	<h1>Notifications</h1>
+
+	<!--fetch() polyfill-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.3/fetch.min.js"></script>	
+	<script>
+        function makeid(){
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+            for( var i=0; i < 5; i++ )
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+            return text;
+        }
+        random = makeid()
+        // make a new user and get the header so we can register the websocket
+        var user = {
+            "email": random + "@gmail.com",
+            "password": "test1234",
+            "passwordConf": "test1234",
+            "username": random,
+            "firstName": "test",
+            "lastName": "test"
+        }
+        var auth
+        var request = new Request('https://api.aethanol.me/v1/users', {
+            method: 'POST',
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            }) ,
+            body: JSON.stringify(user) 
+        })
+        fetch(request).then(function(resp) {
+            auth = resp.headers.get('Authorization')
+            auth = auth.substr(7)
+            //use `wss://` for servers that support TLS
+		    var websock = new WebSocket("wss://api.aethanol.me/v1/websocket?auth=" + auth)
+            console.log(websock)
+            websock.addEventListener("message", function(wsevent) {
+                console.log("HAP")
+                var event = JSON.parse(wsevent.data);
+                console.log(event)
+            })
+        })
+		
+	</script>
+</body>
+</html>

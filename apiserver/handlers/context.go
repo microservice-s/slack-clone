@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/aethanol/challenges-aethanol/apiserver/events"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
 	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 	"github.com/aethanol/challenges-aethanol/apiserver/passwordreset"
@@ -15,4 +16,5 @@ type Context struct {
 	MessageStore messages.Store
 	ResetStore   passwordreset.Store
 	EmailPass    string
+	Notifier     *events.Notifier
 }

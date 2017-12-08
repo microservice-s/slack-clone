@@ -5,27 +5,11 @@ import (
 	"io"
 	"net/http"
 
-	"errors"
-
 	"path"
 
 	"github.com/aethanol/challenges-aethanol/apiserver/models/messages"
-	"github.com/aethanol/challenges-aethanol/apiserver/sessions"
+	"github.com/aethanol/challenges-aethanol/apiserver/models/users"
 )
-
-func (ctx *Context) authenticated(w http.ResponseWriter, r *http.Request) (*SessionState, error) {
-	// Get the session state
-	state := &SessionState{}
-
-	// get the state of the browser that is accessing their page
-	_, err := sessions.GetState(r, ctx.SessionKey, ctx.SessionStore, &state)
-	if err != nil {
-		// http.Error(w, "error getting session state "+err.Error(),
-		// 	http.StatusUnauthorized)
-		return nil, errors.New(http.StatusText(http.StatusUnauthorized))
-	}
-	return state, nil
-}
 
 // ChannelsHandler allows a user to (GET) their valid channels and (POST) add a user to a channels member list
 func (ctx *Context) ChannelsHandler(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +61,8 @@ func (ctx *Context) ChannelsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// notify the clients of the new channel
+		ctx.notify("new channel", channel)
 		// write the channel to the user
 		Respond(w, channel, contentTypeJSONUTF8)
 	}
@@ -129,6 +115,10 @@ func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Reques
 				http.StatusInternalServerError)
 			return
 		}
+
+		// notify the clients of the updated channel
+		ctx.notify("updated channel", channel)
+
 		// respond
 		Respond(w, channel, contentTypeJSONUTF8)
 	// delete the channel specified
@@ -142,40 +132,84 @@ func (ctx *Context) SpecificChannelHandler(w http.ResponseWriter, r *http.Reques
 		}
 		// otherwise respond with a simple message that the channel was deleted
 		io.WriteString(w, "channel deleted\n")
-	// add a
+	// add a user to a channel
 	case "LINK":
 		// check if there is a Link header in the request
 		headLink := r.Header.Get("Link")
 		// case where someone is adding a user to a channel
-		var err error
 		if len(headLink) != 0 {
-			err = ctx.MessageStore.AddUserToChannel(headLink, cID, state.User.ID)
+			if err := ctx.MessageStore.AddUserToChannel(headLink, cID, state.User.ID); err != nil {
+				http.Error(w, "error linking user: "+err.Error(),
+					http.StatusForbidden)
+				return
+			}
+			// notify the clients of the new user joining the channel
+			d := struct {
+				UserID    users.UserID       `json:"userid"`
+				ChannelID messages.ChannelID `json:"channelid"`
+			}{
+				headLink,
+				cID,
+			}
+			ctx.notify("user joined", d)
+
 			// user is adding themselves to a channel
 		} else {
-			err = ctx.MessageStore.AddUserToChannel(state.User.ID, cID, state.User.ID)
+			if err := ctx.MessageStore.AddUserToChannel(state.User.ID, cID, state.User.ID); err != nil {
+				http.Error(w, "error linking user: "+err.Error(),
+					http.StatusForbidden)
+				return
+			}
+			// notify the clients of the new user joining the channel
+			d := struct {
+				UserID    users.UserID       `json:"userid"`
+				ChannelID messages.ChannelID `json:"channelid"`
+			}{
+				state.User.ID,
+				cID,
+			}
+			ctx.notify("user joined", d)
 		}
-		if err != nil {
-			http.Error(w, "error linking user: "+err.Error(),
-				http.StatusForbidden)
-			return
-		}
+
 		// otherwise respond with a simple message that the channel was deleted
 		io.WriteString(w, "user added to channel\n")
+		// delete a user from a channel
 	case "UNLINK":
 		// check if there is a Link header in the request
 		headLink := r.Header.Get("Link")
 		// case where someone is adding a user to a channel
-		var err error
 		if len(headLink) != 0 {
-			err = ctx.MessageStore.RemoveUserFromChannel(headLink, cID, state.User.ID)
+			if err := ctx.MessageStore.AddUserToChannel(headLink, cID, state.User.ID); err != nil {
+				http.Error(w, "error linking user: "+err.Error(),
+					http.StatusForbidden)
+				return
+			}
+			// notify the clients of the new user joining the channel
+			d := struct {
+				UserID    users.UserID       `json:"userid"`
+				ChannelID messages.ChannelID `json:"channelid"`
+			}{
+				headLink,
+				cID,
+			}
+			ctx.notify("user left", d)
+
 			// user is adding themselves to a channel
 		} else {
-			err = ctx.MessageStore.RemoveUserFromChannel(state.User.ID, cID, state.User.ID)
-		}
-		if err != nil {
-			http.Error(w, "error linking user: "+err.Error(),
-				http.StatusForbidden)
-			return
+			if err := ctx.MessageStore.AddUserToChannel(state.User.ID, cID, state.User.ID); err != nil {
+				http.Error(w, "error linking user: "+err.Error(),
+					http.StatusForbidden)
+				return
+			}
+			// notify the clients of the new user joining the channel
+			d := struct {
+				UserID    users.UserID       `json:"userid"`
+				ChannelID messages.ChannelID `json:"channelid"`
+			}{
+				state.User.ID,
+				cID,
+			}
+			ctx.notify("user left", d)
 		}
 		// otherwise respond with a simple message that the channel was deleted
 		io.WriteString(w, "user removed from channel\n")
@@ -221,7 +255,10 @@ func (ctx *Context) MessagesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// write the channel to the user
+		// notify the clients of the new message
+		ctx.notify("new message", message)
+
+		// write the message to the user
 		Respond(w, message, contentTypeJSONUTF8)
 	}
 }
@@ -263,6 +300,10 @@ func (ctx *Context) SpecificMessageHandler(w http.ResponseWriter, r *http.Reques
 				http.StatusInternalServerError)
 			return
 		}
+
+		// notify the clients of the message update
+		ctx.notify("message update", message)
+
 		// respond
 		Respond(w, message, contentTypeJSONUTF8)
 
@@ -275,6 +316,9 @@ func (ctx *Context) SpecificMessageHandler(w http.ResponseWriter, r *http.Reques
 				http.StatusForbidden)
 			return
 		}
+
+		// notify the clients of the message update
+		ctx.notify("message deleted", mID)
 		// otherwise respond with a simple message that the message was deleted
 		io.WriteString(w, "message deleted\n")
 	}
